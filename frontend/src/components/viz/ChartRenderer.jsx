@@ -10,18 +10,36 @@ import { TableViz } from './TableViz';
 import { BarChart2, AlertTriangle, Maximize2, X, Download, RefreshCw } from 'lucide-react';
 
 const VIZ_COMPONENTS = {
-  bar:      BarChartViz,
-  line:     LineChartViz,
-  pie:      PieChartViz,
-  scatter:  ScatterChartViz,
-  area:     AreaChartViz,
-  composed: ComposedChartViz,
-  map:      MapChartViz,
-  table:    TableViz,
+  // Primary types
+  bar:         BarChartViz,
+  line:        LineChartViz,
+  pie:         PieChartViz,
+  scatter:     ScatterChartViz,
+  area:        AreaChartViz,
+  composed:    ComposedChartViz,
+  map:         MapChartViz,
+  table:       TableViz,
+  // Common aliases the backend may return
+  trend:        LineChartViz,
+  trending:     LineChartViz,
+  timeseries:   LineChartViz,
+  time_series:  LineChartViz,
+  histogram:    BarChartViz,
+  column:       BarChartViz,
+  donut:        PieChartViz,
+  doughnut:     PieChartViz,
 };
 
 /** Ordered list of switchable chart types (map & table excluded — incompatible data shapes) */
 const SWITCHABLE_TYPES = ['bar', 'line', 'area', 'scatter', 'pie'];
+
+/**
+ * Resolve the canonical component for a given viz_type string,
+ * falling back to bar if unknown.
+ */
+function resolveComponent(vizType) {
+  return VIZ_COMPONENTS[vizType] || VIZ_COMPONENTS[vizType?.toLowerCase()] || BarChartViz;
+}
 
 /** Download the chart container's canvas as a PNG */
 async function downloadChartPng(containerEl, title) {
@@ -88,18 +106,18 @@ export function ChartRenderer({ vizConfig }) {
 
   if (!vizConfig || !vizConfig.viz_type) return null;
 
-  const Component = VIZ_COMPONENTS[activeType] || VIZ_COMPONENTS[vizConfig.viz_type];
+  // activeType starts as vizConfig.viz_type but can be changed by the switcher.
+  // Resolve the component for whichever type is currently active.
+  const Component = resolveComponent(activeType);
 
-  if (!Component) {
-    return (
-      <div className="flex items-center gap-2 text-slate-500 text-sm py-4">
-        <AlertTriangle size={16} className="text-amber-500" />
-        <span>Unsupported visualization type: <code className="font-mono text-xs">{vizConfig.viz_type}</code></span>
-      </div>
-    );
-  }
+  // The canonical type (after alias resolution) — used for canSwitch logic
+  const canonicalType = SWITCHABLE_TYPES.includes(vizConfig.viz_type)
+    ? vizConfig.viz_type
+    : SWITCHABLE_TYPES.includes(activeType)
+    ? activeType
+    : null;
 
-  const canSwitch = SWITCHABLE_TYPES.includes(vizConfig.viz_type);
+  const canSwitch = !!canonicalType;
 
   /** Shared header row used in both inline and expanded views */
   function ChartHeader({ onExpand, expanded }) {
@@ -185,7 +203,8 @@ export function ChartRenderer({ vizConfig }) {
           style={{ background: 'rgba(10,15,26,0.6)', border: '1px solid rgba(34,211,238,0.07)' }}
           onClick={() => showTypePicker && setShowTypePicker(false)}
         >
-          <Component vizConfig={{ ...vizConfig, viz_type: activeType }} />
+          {/* Pass vizConfig as-is; each chart normalises its own keys internally */}
+          <Component vizConfig={vizConfig} activeType={activeType} />
         </div>
       </div>
 
@@ -266,10 +285,10 @@ export function ChartRenderer({ vizConfig }) {
               </div>
             </div>
 
-            {/* Modal body */}
-            <div className="flex-1 p-6 sm:p-8 overflow-hidden bg-slate-900/40">
-              <div className="w-full h-full min-h-[400px]">
-                <Component vizConfig={{ ...vizConfig, viz_type: activeType }} />
+            {/* Modal body — ResponsiveContainer needs an explicit height, not 100% in a flex child */}
+            <div className="flex-1 p-6 sm:p-8 bg-slate-900/40" style={{ minHeight: 0 }}>
+              <div style={{ width: '100%', height: '100%', minHeight: 400 }}>
+                <Component vizConfig={vizConfig} activeType={activeType} />
               </div>
             </div>
           </div>
