@@ -95,3 +95,8 @@ The system utilizes a React/Vite web client communicating with a Python FastAPI 
 - Large files may hit processing constraints due to hardware limits or Groq API token limits.
 - The use of external APIs relies on free tiers which may rate limit intensive usage.
 
+## Future Improvements
+- Expanding the number of personas for deeper, more context-rich predictions
+- Ability to interact directly with a specific agent (e.g., analyst, investor) during conversations
+- More adaptive reasoning where agents evolve based on data patterns over time
+
