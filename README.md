@@ -1,107 +1,291 @@
-# Data-Wire 🚀
+# Data-Wire ⚡
 
-**Data-Wire** is a scalable, multi-agent AI data analytics platform designed to analyze, process, and derive insights from large datasets. Inspired by advanced multi-agent workflows, it employs a split-stack architecture to ingest large CSV files, securely store them, and engage a team of specialized AI agents (e.g., analysts, investors, geopolitics experts) to debate and synthesize actionable insights in real time.
-
----
-
-## 🛠️ Architecture & Scalability
-
-Our backend is built around **FastAPI** for maximal performance and uses modern, asynchronous Python (`asyncio`, `asyncpg`) to support high concurrency. We designed the architecture to scale seamlessly beyond serverless constraints.
-
-### 📁 Scalable Directory Structure
-We utilize a domain-driven, modular folder structure that enforces a clean separation of concerns:
-
-- **`api/`**: Contains our FastAPI routers, endpoints, and validation logic. Keeping HTTP logic separate from business logic.
-- **`services/`**: The core business logic and heavy lifting. Handles large file processing (using DuckDB) before pushing optimized datasets to PostgreSQL.
-- **`agents/`**: Our proprietary LangChain/LangGraph-based multi-agent debate pipeline. Contains state definitions, specialized agent personas, tool definitions, and LLM orchestration logic.
-- **`database/`**: Orchestrates database connection pooling (via asyncpg), SQLAlchemy ORM models, and migrations.
-- **`utils/`**: Shared helper functions, API clients, and constants.
-
-### 📝 Structured Logging
-We leverage **`structlog`** universally across the application:
-- **Local Development**: Emits colorful, human-readable tracebacks natively to your terminal.
-- **Production**: Automatically switches to emitting structured, machine-readable JSON payloads (`LOG_FORMAT=json`). This enables flawless ingestion into centralized log management tools (like Datadog, ELK, or CloudWatch), making debugging distributed traces and analytics natively queryable.
+**Data-Wire** is a full-stack, multi-agent AI data analytics platform. Upload any CSV, ask questions in plain English, and get real-time AI-powered insights with auto-generated visualizations — powered by a LangGraph agent debate pipeline, FastAPI streaming backend, and a React + Recharts frontend.
 
 ---
 
-## 🔌 Key Services & Technologies
+## 📑 Table of Contents
 
-1. **Supabase (PostgreSQL)**
-   Serves as our primary transactional database. We connect securely via Supabase's **IPv4 Transaction Connection Pooler** (port 6543) coupled with `asyncpg` to guarantee robust performance and eliminate connection exhaustion during asynchronous operations.
-
-2. **Upstash Serverless Redis**
-   Provides highly available, low-latency caching and state management for agent workflows. It ensures rapid state retrieval using `rediss://` for TLS-secured connections.
-
-3. **Groq & Gemini Flash**
-   Powers the AI engine. Groq (Llama 3.3) provides ultra-fast intent routing and foundational pipeline reasoning, while Gemini handles complex multimodal or deep reasoning tasks seamlessly.
-
-4. **DuckDB**
-   Employed locally within our pipeline to effortlessly handle in-memory processing of massive CSV uploads (up to 2GB), allowing us to efficiently chunk, query, and stream huge datasets without bloating RAM.
-
-5. **NewsData API**
-   Equips our Geopolitical & Investor AI agents with real-time news retrieval tools to contextualize dataset insights with the latest global events.
-
-6. **Render**
-   Our deployment target. Governed by raw infrastructure-as-code (`render.yaml`), we deploy the backend application cleanly as a standalone web service to circumvent the typical Vercel serverless timeouts associated with long-running LLM tasks.
+- [Architecture](#️-architecture)
+- [Tech Stack](#-tech-stack)
+- [Project Structure](#-project-structure)
+- [Quick Start (Both Servers)](#-quick-start-both-servers)
+- [Backend Setup](#-backend-setup)
+- [Frontend Setup](#-frontend-setup)
+- [Environment Variables](#-environment-variables)
+- [API Reference](#-api-reference)
+- [Deployment](#-deployment)
 
 ---
 
-## 🚀 Local Development Setup
+## 🏗️ Architecture
 
-Follow these steps to get the backend running locally.
+```
+Browser (React + Vite)
+       │  HTTP / SSE streaming
+       ▼
+FastAPI (Python 3.11+)
+  ├── CSV upload → DuckDB processing → Supabase/Postgres
+  ├── Intent router (Groq Llama 3.3)
+  └── LangGraph multi-agent pipeline
+        ├── 📊 Analyst Agent
+        ├── 💹 Investor Agent
+        └── 🌍 Geopolitical Agent
+              └── NewsData API (real-time context)
+```
 
-### 1. Prerequisites
-- Python 3.11+
-- Git
+Agents stream their outputs back to the browser via **Server-Sent Events (SSE)**, so you see the analysis as it happens.
 
-### 2. Clone and Setup Environment
-Navigate to the root `data-wire` repository and switch to the backend folder:
+---
+
+## 🔌 Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Frontend** | React 19, Vite, Tailwind CSS, Recharts, React-Markdown |
+| **Backend** | FastAPI, Uvicorn, asyncio, SSE-Starlette |
+| **AI / Agents** | LangGraph, LangChain-Groq (Llama 3.3) |
+| **Data Processing** | DuckDB, Pandas, ydata-profiling |
+| **Database** | Supabase (asyncpg / PostgreSQL) |
+| **Cache / State** | Upstash Redis (TLS) |
+| **News Context** | NewsData.io API |
+| **Logging** | structlog (pretty dev / JSON prod) |
+| **Deployment** | Render (backend) + any static host (frontend) |
+
+---
+
+## 🗂️ Project Structure
+
+```
+data-wire/
+├── dev.sh                  # One-command dev launcher (both servers)
+├── frontend/               # React + Vite app
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── chat/       # ChatContainer, ChatInput, MessageBubble, StreamingStatus
+│   │   │   ├── upload/     # UploadZone, ProcessingScreen
+│   │   │   └── viz/        # ChartRenderer + 8 chart types
+│   │   ├── api/            # fetch helpers (chat, upload, status)
+│   │   ├── hooks/          # useChat, useUpload
+│   │   ├── store/          # React Context app state
+│   │   └── utils/          # color schemes, helpers
+│   └── package.json
+└── backend/
+    ├── main.py             # FastAPI app entry point
+    ├── requirements.txt
+    ├── .env.example
+    ├── api/                # HTTP routers & endpoint handlers
+    ├── agents/             # LangGraph pipeline, agent personas, tools
+    ├── services/           # CSV ingestion, DuckDB processing, profiling
+    ├── database/           # asyncpg pool, SQLAlchemy models
+    └── utils/              # shared helpers, API clients
+```
+
+---
+
+## ⚡ Quick Start (Both Servers)
+
+The fastest way to run both the backend and frontend together:
+
+```bash
+# Clone the repo
+git clone https://github.com/your-username/data-wire.git
+cd data-wire
+
+# 1. Set up the backend venv (first time only)
+cd backend
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+cp .env.example .env          # then fill in your keys (see below)
+cd ..
+
+# 2. Install frontend deps (first time only)
+cd frontend && npm install && cd ..
+
+# 3. Launch everything
+chmod +x dev.sh
+./dev.sh
+```
+
+`dev.sh` starts both servers in parallel and prefixes their output:
+- **Backend** → `http://localhost:8000`
+- **Frontend** → `http://localhost:5173`
+
+Press **Ctrl+C** to stop both.
+
+---
+
+## 🐍 Backend Setup
+
+### Prerequisites
+- Python **3.11+**
+- pip / virtualenv
+
+### 1. Create a virtual environment
 
 ```bash
 cd backend
 
-# Create a virtual environment
-python -m venv venv
+# Create venv (the dev.sh script expects .venv, not venv)
+python3 -m venv .venv
 
-# Activate the virtual environment
-# On Windows:
-venv\Scripts\activate
-# On macOS / Linux:
-source venv/bin/activate
+# Activate
+source .venv/bin/activate          # macOS / Linux
+# .venv\Scripts\activate           # Windows
+```
 
-# Install all dependencies
+### 2. Install dependencies
+
+```bash
 pip install -r requirements.txt
 ```
 
-### 3. Environment Variables
-Create a `.env` file in the `backend/` directory. You can use the provided `.env.example` as a template. You will need to populate it with your specific service keys.
+Key packages installed:
+
+| Package | Purpose |
+|---|---|
+| `fastapi` + `uvicorn` | HTTP server & routing |
+| `sse-starlette` | Server-Sent Events streaming |
+| `langchain-groq` + `langgraph` | Multi-agent pipeline |
+| `duckdb` | In-process CSV processing |
+| `pandas` + `ydata-profiling` | Data profiling |
+| `asyncpg` + `SQLAlchemy` | Async Postgres |
+| `redis` | Upstash Redis client |
+| `structlog` | Structured logging |
+| `tenacity` | Retry logic (Groq rate limits) |
+
+### 3. Configure environment variables
+
+```bash
+cp .env.example .env
+# Now open .env and fill in your keys (see Environment Variables section)
+```
+
+### 4. Run the backend
+
+```bash
+# With hot-reload (development)
+uvicorn main:app --reload --port 8000
+
+# Or via the activated venv directly
+.venv/bin/uvicorn main:app --reload --port 8000
+```
+
+| URL | Description |
+|---|---|
+| `http://localhost:8000/health` | Health check |
+| `http://localhost:8000/docs` | Interactive Swagger UI |
+| `http://localhost:8000/redoc` | ReDoc API reference |
+
+---
+
+## 🎨 Frontend Setup
+
+### Prerequisites
+- **Node.js 18+** and npm
+
+### 1. Install dependencies
+
+```bash
+cd frontend
+npm install
+```
+
+### 2. Run the dev server
+
+```bash
+npm run dev
+```
+
+Opens at **`http://localhost:5173`** with hot module replacement.
+
+### Other useful commands
+
+```bash
+npm run build      # Production build → dist/
+npm run preview    # Preview the production build locally
+npm run lint       # ESLint check
+```
+
+### Frontend environment
+
+The frontend talks to the backend at `http://localhost:8000` by default. If you change the backend port, update the API base URL in `frontend/src/api/`.
+
+---
+
+## 🔑 Environment Variables
+
+Create `backend/.env` (copy from `.env.example`):
 
 ```env
-# LLM
-GROQ_API_KEY=your_groq_api_key
-GROQ_API_KEY_FALLBACK=your_fallback_key
+# ── LLM ────────────────────────────────────────────────────────────────────
+# Get your key at https://console.groq.com
+GROQ_API_KEY=gsk_...
+GROQ_API_KEY_FALLBACK=gsk_...          # optional secondary key for rate-limit fallback
 
-# Supabase Postgres (Must use the Connection Pooler URL pointing to port 6543)
-DATABASE_URL=postgresql://user:pass@aws-0-xxxx.pooler.supabase.com:6543/postgres
+# ── Database ────────────────────────────────────────────────────────────────
+# Use the Supabase Transaction Connection Pooler URL (port 6543, not 5432)
+# https://supabase.com/dashboard/project/_/settings/database
+DATABASE_URL=postgresql+asyncpg://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres
 
-# Upstash Redis
-REDIS_URL=rediss://default:your_upstash_key@your-redis-url.upstash.io:6379
+# ── Cache ───────────────────────────────────────────────────────────────────
+# Upstash Redis → https://console.upstash.com
+# Must use rediss:// (TLS) not redis://
+REDIS_URL=rediss://default:[password]@[host].upstash.io:6379
 
-# NewsData API (For Agent web search context)
-NEWSDATA_API_KEY=your_newsdata_key
+# ── News context for agents ─────────────────────────────────────────────────
+# https://newsdata.io/register
+NEWSDATA_API_KEY=pub_...
 
-# Frontend URL
+# ── CORS ────────────────────────────────────────────────────────────────────
+# Must match the URL your browser opens the frontend on
 FRONTEND_URL=http://localhost:5173
 ```
 
-### 4. Run the API locally
-Once everything is configured, ignite the server using `uvicorn`:
+> **Important:** Supabase requires the Transaction **Pooler** URL on port **6543**, not the direct 5432 connection, for asyncpg compatibility.
 
-```bash
-uvicorn main:app --reload
+---
+
+## 📡 API Reference
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/health` | Health check |
+| `POST` | `/api/upload` | Upload a CSV file (multipart/form-data) |
+| `GET` | `/api/status/{dataset_id}` | Poll dataset processing status |
+| `GET` | `/api/chat/stream` | SSE stream — send query, receive agent chunks |
+
+The Swagger UI at `http://localhost:8000/docs` has live request/response examples for every endpoint.
+
+---
+
+## 🚀 Deployment
+
+### Backend → Render
+
+A `render.yaml` is included. Connect your GitHub repo to [Render](https://render.com), point it at `backend/`, and set the environment variables in the Render dashboard.
+
+```yaml
+# render.yaml (already in backend/)
+services:
+  - type: web
+    name: data-wire-api
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
 ```
 
-- **Health Check**: `http://127.0.0.1:8000/health`
-- **Interactive Swagger Docs (Test your API!)**: `http://127.0.0.1:8000/docs`
+### Frontend → Any Static Host
 
-> **Note**: We rely on standard library logging combined with Uvicorn. Upon success, you'll see a structured startup log from `structlog` and notice Uvicorn watching for local hot-reloads!
+```bash
+cd frontend
+npm run build        # outputs to frontend/dist/
+```
+
+Deploy the `dist/` folder to **Vercel**, **Netlify**, **Render Static Site**, or any CDN. Set the backend API URL to your Render service URL before building.
+
+---
+
+## 🪪 License
+
+MIT — do whatever you want with it.
