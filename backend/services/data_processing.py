@@ -135,7 +135,7 @@ def bulk_insert_to_postgres(database_url: str, file_path: str, dataset_id: str, 
 
 async def process_large_csv_background(file_path: str, dataset_id: str, database_url: str, db_session):
     """Background task to run ingestion and database bulk insert."""
-    from backend.database.models import Dataset, DatasetColumn, DatasetProfile
+    from database.models import Dataset, DatasetColumn, DatasetProfile
     from sqlalchemy import select
     
     try:

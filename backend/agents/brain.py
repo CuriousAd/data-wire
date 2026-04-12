@@ -3,8 +3,8 @@ from pydantic import BaseModel, Field
 import structlog
 import json
 
-from backend.utils.llm import brain_llm
-from backend.agents.viz_schema import VizConfig
+from utils.llm import brain_llm
+from agents.viz_schema import VizConfig
 
 logger = structlog.get_logger(__name__)
 

@@ -3,8 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from backend.database.connection import get_db
-from backend.database.models import Dataset, DatasetProfile
+from database.connection import get_db
+from database.models import Dataset, DatasetProfile
 
 router = APIRouter()
 

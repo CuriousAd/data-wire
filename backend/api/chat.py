@@ -7,10 +7,10 @@ from sqlalchemy import select
 from sse_starlette.sse import EventSourceResponse
 import structlog
 
-from backend.database.connection import get_db
-from backend.database.models import Dataset, DatasetColumn
-from backend.agents.workflow import app_workflow
-from backend.agents.state import DataWireState
+from database.connection import get_db
+from database.models import Dataset, DatasetColumn
+from agents.workflow import app_workflow
+from agents.state import DataWireState
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()

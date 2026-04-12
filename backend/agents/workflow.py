@@ -3,11 +3,11 @@ from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import HumanMessage
 import structlog
 
-from backend.agents.state import DataWireState, AgentFinding
-from backend.agents.tools import ANALYST_TOOLS, INVESTOR_TOOLS, GEOPOLITICS_TOOLS
-from backend.agents.personas import ANALYST_PERSONA, INVESTOR_PERSONA, GEOPOLITICS_PERSONA, build_agent_prompt
-from backend.agents.brain import route_query_logic, synthesize_findings_logic
-from backend.utils.llm import agent_llm
+from agents.state import DataWireState, AgentFinding
+from agents.tools import ANALYST_TOOLS, INVESTOR_TOOLS, GEOPOLITICS_TOOLS
+from agents.personas import ANALYST_PERSONA, INVESTOR_PERSONA, GEOPOLITICS_PERSONA, build_agent_prompt
+from agents.brain import route_query_logic, synthesize_findings_logic
+from utils.llm import agent_llm
 
 logger = structlog.get_logger(__name__)
 

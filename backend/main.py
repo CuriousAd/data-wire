@@ -6,8 +6,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-from backend.database.connection import init_db
-from backend.api import upload, status, chat
+from database.connection import init_db
+from api import upload, status, chat
 
 load_dotenv()
 
@@ -40,7 +40,7 @@ structlog.configure(
     processors=shared_processors,
     wrapper_class=structlog.stdlib.BoundLogger,
     context_class=dict,
-    logger_factory=structlog.PrintLoggerFactory(),
+    logger_factory=structlog.stdlib.LoggerFactory(),
     cache_logger_on_first_use=True,
 )
 

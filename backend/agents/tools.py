@@ -5,7 +5,7 @@ from typing import List
 import psycopg2
 from scipy.stats import linregress
 from langchain_core.tools import tool
-from backend.utils.news_client import search_news as fetch_news
+from utils.news_client import search_news as fetch_news
 import structlog
 
 logger = structlog.get_logger(__name__)

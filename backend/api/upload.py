@@ -3,9 +3,9 @@ import tempfile
 import structlog
 from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from backend.database.connection import get_db, DATABASE_URL
-from backend.database.models import Dataset
-from backend.services.data_processing import process_csv, bulk_insert_to_postgres, process_large_csv_background
+from database.connection import get_db, DATABASE_URL
+from database.models import Dataset
+from services.data_processing import process_csv, bulk_insert_to_postgres, process_large_csv_background
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
