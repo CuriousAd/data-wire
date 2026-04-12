@@ -24,6 +24,7 @@ class DataWireState(TypedDict):
     dataset_id: str
     data_schema: List[dict]
     data_sample: List[dict]
+    data_profile: Optional[dict]
     query_type: str
     active_agents: List[str]
     extracted_keywords: List[str]

@@ -8,7 +8,7 @@ from sse_starlette.sse import EventSourceResponse
 import structlog
 
 from database.connection import get_db
-from database.models import Dataset, DatasetColumn
+from database.models import Dataset, DatasetColumn, DatasetProfile
 from agents.workflow import app_workflow
 from agents.state import DataWireState
 
@@ -34,6 +34,11 @@ async def chat_endpoint(request: Request, body: ChatRequest, db: AsyncSession = 
     cols = cols_result.scalars().all()
     schema_info = [{"column_name": c.name, "column_type": c.dtype} for c in cols]
     
+    # Get pre-computed profile (from ydata-profiling during ingestion)
+    profile_result = await db.execute(select(DatasetProfile).where(DatasetProfile.dataset_id == body.dataset_id))
+    profile = profile_result.scalar_one_or_none()
+    profile_json = profile.profile_json if profile else None
+    
     # 2. Build initial state
     initial_state = DataWireState(
         messages=[],
@@ -41,6 +46,7 @@ async def chat_endpoint(request: Request, body: ChatRequest, db: AsyncSession = 
         dataset_id=body.dataset_id,
         data_schema=schema_info,
         data_sample=[], # Skipping explicit injection for now, tools will query logic directly
+        data_profile=profile_json,
         query_type="general",
         active_agents=[],
         extracted_keywords=[],

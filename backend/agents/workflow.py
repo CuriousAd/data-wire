@@ -31,7 +31,8 @@ def create_agent_node(persona_name: str, base_persona: str, tools: list):
         logger.info("workflow.agent.started", agent=persona_name)
         
         prompt = build_agent_prompt(
-            persona_name, base_persona, state["data_schema"], state["data_sample"], state["dataset_id"]
+            persona_name, base_persona, state["data_schema"], state["data_sample"], state["dataset_id"],
+            profile_json=state.get("data_profile")
         )
         
         # We leverage create_react_agent for robust tool-calling and retry loops
