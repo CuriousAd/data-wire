@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { uploadCSV } from '../api/upload';
 import { getDatasetStatus } from '../api/status';
@@ -11,6 +11,13 @@ const MAX_POLL_ATTEMPTS = 150;
 export function useUpload() {
   const [isUploading, setIsUploading] = useState(false);
   const { goToWorkspace, updateDataset } = useAppStore();
+  const pollTimerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
+    };
+  }, []);
 
   const validateFile = (file) => {
     if (!file.name.toLowerCase().endsWith('.csv')) {
@@ -64,14 +71,14 @@ export function useUpload() {
           setIsUploading(false);
           return;
         }
-        setTimeout(poll, POLL_INTERVAL_MS);
+        pollTimerRef.current = setTimeout(poll, POLL_INTERVAL_MS);
       } catch (err) {
         updateDataset(datasetId, { status: 'error' });
         toast.error(err.message || 'Status check failed.');
         setIsUploading(false);
       }
     };
-    setTimeout(poll, POLL_INTERVAL_MS);
+    pollTimerRef.current = setTimeout(poll, POLL_INTERVAL_MS);
   }, [updateDataset]);
 
   return { isUploading, handleUpload };

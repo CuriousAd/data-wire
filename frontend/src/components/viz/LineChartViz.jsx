@@ -1,33 +1,12 @@
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  ReferenceLine, Area, AreaChart
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import { getScheme } from '../../utils/colorSchemes';
 import { CustomTooltip } from './ChartTooltip';
-import { compactNumber } from '../../utils/formatters';
+import { compactNumber, normalizeDataPoint, safeInterval } from '../../utils/formatters';
+import { getChartStyles } from '../../utils/chartDefaults';
 
-/**
- * Normalise one data point from the backend.
- * Backend may send { label, value } OR { label, actual } OR { label, y } – handle all.
- */
-function normalise(d) {
-  return {
-    label:       d.label ?? d.x ?? d.name ?? '',
-    actual:      d.value  ?? d.actual ?? d.y ?? null,
-    highlighted: d.highlighted ?? false,
-  };
-}
-
-/**
- * Compute a safe XAxis interval that avoids label collisions.
- * Returns 'preserveStartEnd' for large datasets, 0 for small ones.
- */
-function safeInterval(len) {
-  if (len <= 12) return 0;
-  return Math.max(1, Math.floor(len / 8));
-}
-
-export function LineChartViz({ vizConfig }) {
+export function LineChartViz({ vizConfig, isDark = false }) {
   const scheme = getScheme(vizConfig.color_scheme);
   const rawHistorical = vizConfig.data || [];
   const forecastData  = vizConfig.forecast || [];
@@ -35,7 +14,10 @@ export function LineChartViz({ vizConfig }) {
   const metricName = vizConfig.y_label || vizConfig.title || 'Metric';
 
   // Normalise historical data so both { label, value } and { label, actual } work
-  const historicalData = rawHistorical.map(normalise);
+  const historicalData = rawHistorical.map(d => {
+    const norm = normalizeDataPoint(d);
+    return { ...norm, actual: norm.value }; // Map to 'actual' for line chart
+  });
 
   // Merge historical + forecast data for unified x-axis
   const mergedData = [
@@ -53,31 +35,33 @@ export function LineChartViz({ vizConfig }) {
 
   // For very small datasets show dots so the line is visible
   const showDots = mergedData.length <= 20;
+  
+  const styles = getChartStyles(isDark);
 
   return (
     <ResponsiveContainer width="100%" height={300}>
       <LineChart data={mergedData} margin={{ top: 10, right: 20, left: 0, bottom: 40 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+        <CartesianGrid strokeDasharray="3 3" stroke={styles.gridStroke} vertical={false} />
         <XAxis
           dataKey="label"
-          tick={{ fill: '#94a3b8', fontSize: 11 }}
+          tick={{ fill: styles.tickColor, fontSize: 11 }}
           angle={mergedData.length > 8 ? -35 : 0}
           textAnchor={mergedData.length > 8 ? 'end' : 'middle'}
           interval={safeInterval(mergedData.length)}
           label={vizConfig.x_label
-            ? { value: vizConfig.x_label, position: 'insideBottom', offset: -30, fill: '#64748b', fontSize: 11 }
+            ? { value: vizConfig.x_label, position: 'insideBottom', offset: -30, fill: styles.labelColor, fontSize: 11 }
             : undefined}
         />
         <YAxis
           tickFormatter={compactNumber}
-          tick={{ fill: '#94a3b8', fontSize: 11 }}
+          tick={{ fill: styles.tickColor, fontSize: 11 }}
           width={48}
           label={vizConfig.y_label
-            ? { value: vizConfig.y_label, angle: -90, position: 'insideLeft', fill: '#64748b', fontSize: 11 }
+            ? { value: vizConfig.y_label, angle: -90, position: 'insideLeft', fill: styles.labelColor, fontSize: 11 }
             : undefined}
         />
-        <Tooltip content={<CustomTooltip />} />
-        {vizConfig.show_legend && <Legend wrapperStyle={{ color: '#94a3b8', fontSize: 12 }} />}
+        <Tooltip content={<CustomTooltip isDark={isDark} />} />
+        {vizConfig.show_legend && <Legend wrapperStyle={{ color: styles.legendColor, fontSize: 12 }} />}
 
         {/* Main line */}
         <Line
@@ -87,7 +71,7 @@ export function LineChartViz({ vizConfig }) {
           stroke={scheme.primary}
           strokeWidth={2}
           dot={showDots ? { r: 3, fill: scheme.primary, strokeWidth: 0 } : false}
-          activeDot={{ r: 5, fill: scheme.primary, stroke: '#0a0f1a', strokeWidth: 2 }}
+          activeDot={{ r: 5, fill: scheme.primary, stroke: isDark ? '#0a0f1a' : '#ffffff', strokeWidth: 2 }}
           isAnimationActive={true}
           animationDuration={800}
           connectNulls

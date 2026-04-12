@@ -21,7 +21,10 @@ export function useChat() {
 
     abortRef.current = streamChat(query, activeDataset.id, {
       onRouting: (p) => setStreamingStatus({ phase: 'routing', agents: p.active_agents || [], currentAgent: null, queryType: p.query_type }),
-      onAgentFinding: (p) => setStreamingStatus(s => ({ ...s, phase: 'agent_finding', currentAgent: p.agent_name })),
+      onAgentFinding: (p) => {
+        setStreamingStatus(s => ({ ...s, phase: 'agent_finding', currentAgent: p.agent_name }));
+        updateLastMessage({ agent: p.agent_name });
+      },
       onSynthesizing: () => setStreamingStatus(s => ({ ...s, phase: 'synthesizing', currentAgent: null })),
       onResult: (p) => {
         // Text → right panel (messages)

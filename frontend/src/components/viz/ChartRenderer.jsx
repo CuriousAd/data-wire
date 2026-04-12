@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { BarChartViz } from './BarChartViz';
 import { LineChartViz } from './LineChartViz';
 import { PieChartViz } from './PieChartViz';
@@ -7,7 +7,7 @@ import { AreaChartViz } from './AreaChartViz';
 import { ComposedChartViz } from './ComposedChartViz';
 import { MapChartViz } from './MapChartViz';
 import { TableViz } from './TableViz';
-import { BarChart2, AlertTriangle, Maximize2, X, Download, RefreshCw } from 'lucide-react';
+import { BarChart2, Maximize2, X, RefreshCw } from 'lucide-react';
 
 const VIZ_COMPONENTS = {
   // Primary types
@@ -41,40 +41,10 @@ function resolveComponent(vizType) {
   return VIZ_COMPONENTS[vizType] || VIZ_COMPONENTS[vizType?.toLowerCase()] || BarChartViz;
 }
 
-/** Download the chart container's canvas as a PNG */
-async function downloadChartPng(containerEl, title) {
-  try {
-    // Use html2canvas if available, fallback gracefully
-    if (!window.html2canvas) {
-      // Lazy-load from CDN
-      await new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-        s.onload = resolve;
-        s.onerror = reject;
-        document.head.appendChild(s);
-      });
-    }
-    const canvas = await window.html2canvas(containerEl, {
-      backgroundColor: '#0a0f1a',
-      scale: 2,
-      logging: false,
-    });
-    const link = document.createElement('a');
-    link.download = `${title || 'chart'}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-  } catch (err) {
-    console.warn('Chart download failed:', err);
-  }
-}
-
 export function ChartRenderer({ vizConfig }) {
   const [isExpanded,    setIsExpanded]    = useState(false);
   const [activeType,    setActiveType]    = useState(vizConfig?.viz_type);
-  const [downloading,   setDownloading]   = useState(false);
   const [showTypePicker, setShowTypePicker] = useState(false);
-  const chartBodyRef = useRef(null);
 
   // Sync if vizConfig changes
   useEffect(() => {
@@ -89,13 +59,6 @@ export function ChartRenderer({ vizConfig }) {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isExpanded]);
-
-  const handleDownload = useCallback(async () => {
-    if (!chartBodyRef.current || downloading) return;
-    setDownloading(true);
-    await downloadChartPng(chartBodyRef.current, vizConfig?.title);
-    setDownloading(false);
-  }, [vizConfig?.title, downloading]);
 
   const cycleType = useCallback(() => {
     const idx = SWITCHABLE_TYPES.indexOf(activeType);
@@ -121,20 +84,33 @@ export function ChartRenderer({ vizConfig }) {
 
   /** Shared header row used in both inline and expanded views */
   function ChartHeader({ onExpand, expanded }) {
+    const headerTextClass = expanded ? 'text-slate-200' : 'text-slate-800';
+    const btnClass = expanded 
+      ? 'bg-slate-800 text-slate-400 border-slate-700 hover:border-cyan-500/40 hover:text-slate-200'
+      : 'bg-white text-slate-600 border-[#e5e0da] hover:border-slate-400 hover:text-slate-900 border';
+
+    const disabledBtnClass = expanded
+      ? 'bg-slate-800/50 text-slate-500 border-slate-800'
+      : 'bg-slate-50 text-slate-400 border-[#e5e0da] border';
+
+    const expandBtnClass = expanded
+      ? 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'
+      : 'bg-slate-100 text-slate-500 hover:text-slate-900 hover:bg-slate-200';
+
+    const pickerBgClass = expanded ? 'glass-strong border border-cyan-500/20' : 'bg-white border border-[#e5e0da] shadow-lg';
+    
     return (
       <div className="flex items-center gap-2 mb-3">
-        <BarChart2 size={14} className="text-cyan-400 flex-shrink-0" />
-        <h3 className="text-sm font-semibold text-slate-300 truncate">{vizConfig.title}</h3>
+        <BarChart2 size={14} className={expanded ? "text-cyan-400 flex-shrink-0" : "text-emerald-500 flex-shrink-0"} />
+        <h3 className={`text-sm font-semibold truncate ${headerTextClass}`}>{vizConfig.title}</h3>
 
         <div className="ml-auto flex items-center gap-1.5">
           {/* Chart type badge / switcher */}
           <div className="relative">
             <button
               onClick={() => canSwitch && setShowTypePicker(p => !p)}
-              className={`text-xs px-2 py-0.5 rounded-full border capitalize flex items-center gap-1 transition-all duration-200 ${
-                canSwitch
-                  ? 'bg-slate-800 text-slate-400 border-slate-700 hover:border-cyan-500/40 hover:text-slate-200 cursor-pointer'
-                  : 'bg-slate-800/50 text-slate-500 border-slate-800 cursor-default'
+              className={`text-xs px-2 py-0.5 rounded-md capitalize flex items-center gap-1 transition-all duration-200 ${
+                canSwitch ? `${btnClass} cursor-pointer` : `${disabledBtnClass} cursor-default`
               }`}
               title={canSwitch ? 'Switch chart type' : 'Chart type'}
             >
@@ -145,42 +121,34 @@ export function ChartRenderer({ vizConfig }) {
             {/* Type picker dropdown */}
             {showTypePicker && canSwitch && (
               <div
-                className="absolute right-0 top-full mt-1 z-30 glass-strong rounded-xl p-1.5 border border-cyan-500/20 min-w-[110px] shadow-2xl"
+                className={`absolute right-0 top-full mt-1 z-30 rounded-xl p-1.5 min-w-[110px] ${pickerBgClass}`}
                 style={{ animation: 'slideUp 0.18s cubic-bezier(0.16,1,0.3,1)' }}
               >
-                {SWITCHABLE_TYPES.map(t => (
-                  <button
-                    key={t}
-                    onClick={() => { setActiveType(t); setShowTypePicker(false); }}
-                    className={`w-full text-left text-xs px-2.5 py-1.5 rounded-lg capitalize transition-colors ${
-                      t === activeType
-                        ? 'text-cyan-400 bg-cyan-500/10'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
+                {SWITCHABLE_TYPES.map(t => {
+                  const isMatch = t === activeType;
+                  const itemClass = expanded 
+                    ? (isMatch ? 'text-cyan-400 bg-cyan-500/10' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5')
+                    : (isMatch ? 'text-emerald-600 bg-emerald-50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100');
+                    
+                  return (
+                    <button
+                      key={t}
+                      onClick={() => { setActiveType(t); setShowTypePicker(false); }}
+                      className={`w-full text-left text-xs px-2.5 py-1.5 rounded-lg capitalize transition-colors ${itemClass}`}
+                    >
+                      {t}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
-
-          {/* Download button */}
-          <button
-            onClick={handleDownload}
-            disabled={downloading}
-            className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border border-slate-700 bg-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-600 transition-all duration-200 disabled:opacity-50"
-            title="Download as PNG"
-          >
-            <Download size={10} className={downloading ? 'animate-bounce' : ''} />
-            {downloading ? 'Saving…' : 'PNG'}
-          </button>
 
           {/* Expand button — always visible */}
           {!expanded && (
             <button
               onClick={onExpand}
-              className="flex items-center justify-center w-6 h-6 rounded bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+              className={`flex items-center justify-center w-6 h-6 rounded transition-colors ${expandBtnClass}`}
               title="Expand Chart (Full Screen)"
             >
               <Maximize2 size={12} />
@@ -195,16 +163,15 @@ export function ChartRenderer({ vizConfig }) {
     <>
       {/* Inline chart container */}
       <div className="mt-4 relative" style={{ animation: 'fadeIn 0.4s ease both' }}>
-        <ChartHeader onExpand={() => setIsExpanded(true)} />
+        <ChartHeader onExpand={() => setIsExpanded(true)} expanded={false} />
 
         <div
-          ref={chartBodyRef}
-          className="rounded-xl p-3 relative transition-all duration-200 hover:border-cyan-500/15"
-          style={{ background: 'rgba(10,15,26,0.6)', border: '1px solid rgba(34,211,238,0.07)' }}
+          className="rounded-xl p-3 relative transition-all duration-200 hover:border-slate-300"
+          style={{ background: 'transparent', border: '1px solid transparent' }}
           onClick={() => showTypePicker && setShowTypePicker(false)}
         >
           {/* Pass vizConfig as-is; each chart normalises its own keys internally */}
-          <Component vizConfig={vizConfig} activeType={activeType} />
+          <Component vizConfig={vizConfig} activeType={activeType} isDark={false} />
         </div>
       </div>
 
@@ -228,53 +195,10 @@ export function ChartRenderer({ vizConfig }) {
                   <BarChart2 size={16} className="text-cyan-400" />
                 </div>
                 <h2 className="text-lg font-bold text-slate-200 truncate">{vizConfig.title}</h2>
-                {/* Type switcher in expanded mode */}
-                <div className="relative flex-shrink-0">
-                  <button
-                    onClick={() => canSwitch && setShowTypePicker(p => !p)}
-                    className={`text-xs px-2.5 py-1 rounded-md border capitalize flex items-center gap-1 transition-all duration-200 ${
-                      canSwitch
-                        ? 'bg-slate-800/50 text-slate-400 border-slate-700 hover:border-cyan-500/40 hover:text-slate-200 cursor-pointer'
-                        : 'bg-slate-800/50 text-slate-400 border-slate-700/50 cursor-default'
-                    }`}
-                  >
-                    {activeType}
-                    {canSwitch && <RefreshCw size={10} className="opacity-60" />}
-                  </button>
-                  {showTypePicker && canSwitch && (
-                    <div
-                      className="absolute left-0 top-full mt-1 z-30 glass-strong rounded-xl p-1.5 border border-cyan-500/20 min-w-[110px] shadow-2xl"
-                      style={{ animation: 'slideUp 0.18s cubic-bezier(0.16,1,0.3,1)' }}
-                    >
-                      {SWITCHABLE_TYPES.map(t => (
-                        <button
-                          key={t}
-                          onClick={() => { setActiveType(t); setShowTypePicker(false); }}
-                          className={`w-full text-left text-xs px-2.5 py-1.5 rounded-lg capitalize transition-colors ${
-                            t === activeType
-                              ? 'text-cyan-400 bg-cyan-500/10'
-                              : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-                          }`}
-                        >
-                          {t}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
               </div>
 
               <div className="flex items-center gap-2 flex-shrink-0">
-                {/* Download in modal */}
-                <button
-                  onClick={handleDownload}
-                  disabled={downloading}
-                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-600 transition-all duration-200"
-                  title="Download chart as PNG"
-                >
-                  <Download size={12} className={downloading ? 'animate-bounce' : ''} />
-                  {downloading ? 'Saving…' : 'Download PNG'}
-                </button>
+                <ChartHeader onExpand={() => {}} expanded={true} />
                 <button
                   onClick={() => setIsExpanded(false)}
                   className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors"
@@ -288,7 +212,7 @@ export function ChartRenderer({ vizConfig }) {
             {/* Modal body — ResponsiveContainer needs an explicit height, not 100% in a flex child */}
             <div className="flex-1 p-6 sm:p-8 bg-slate-900/40" style={{ minHeight: 0 }}>
               <div style={{ width: '100%', height: '100%', minHeight: 400 }}>
-                <Component vizConfig={vizConfig} activeType={activeType} />
+                <Component vizConfig={vizConfig} activeType={activeType} isDark={true} />
               </div>
             </div>
           </div>

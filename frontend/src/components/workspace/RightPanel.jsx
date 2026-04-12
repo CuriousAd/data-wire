@@ -5,6 +5,19 @@ import remarkGfm from 'remark-gfm';
 import { useAppStore } from '../../store/appStore';
 import { useChat } from '../../hooks/useChat';
 
+const SEVERITY_CONFIG = {
+  LOW:      { label: 'Low Risk',    className: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
+  MEDIUM:   { label: 'Medium Risk', className: 'bg-amber-50  text-amber-600  border-amber-200'  },
+  HIGH:     { label: 'High Risk',   className: 'bg-red-50    text-red-600    border-red-200'    },
+  CRITICAL: { label: 'Critical',    className: 'bg-red-100   text-red-700    border-red-300 font-semibold' },
+};
+
+const AGENT_STYLES = {
+  analyst_agent:      { label: '📊 Analyst',      color: '#0284c7', bg: '#f0f9ff', border: '#bae6fd' },
+  investor_agent:     { label: '💹 Investor',     color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
+  geo_politics_agent: { label: '🌍 Geo-Politics', color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
+};
+
 function TimeStamp({ iso }) {
   const d = new Date(iso);
   return <span className="text-[9px] text-[#a8a29e] flex items-center gap-1"><Clock size={8} />{d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>;
@@ -27,12 +40,23 @@ function AIMsg({ msg }) {
   const [copied, setCopied] = useState(false);
   const doCopy = () => { if (!msg.content) return; navigator.clipboard.writeText(msg.content).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }); };
 
+  const severity = msg.newsSeverity ? SEVERITY_CONFIG[msg.newsSeverity] : null;
+  const agentCfg = msg.agent ? AGENT_STYLES[msg.agent] : null;
+
   return (
     <div className="flex gap-2">
       <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 bg-[#dfeee6] border border-[#1a3c2e]/10">
         <Bot size={11} className="text-[#1a3c2e]" />
       </div>
       <div className="flex-1 min-w-0">
+        {agentCfg && (
+          <div
+            className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border mb-1.5"
+            style={{ color: agentCfg.color, backgroundColor: agentCfg.bg, borderColor: agentCfg.border }}
+          >
+            {agentCfg.label}
+          </div>
+        )}
         {msg.error && (
           <div className="flex items-start gap-2 text-red-600 bg-red-50 rounded-xl px-3 py-2 border border-red-100 text-[12px]">
             <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" /><p>{msg.error}</p>
@@ -57,6 +81,14 @@ function AIMsg({ msg }) {
             ">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
             </div>
+            
+            {severity && msg.newsSeverity !== 'LOW' && (
+              <div className={`mt-2 mb-1 inline-flex items-center gap-1.5 text-[10px] px-2 py-0.5 rounded-full border font-medium ${severity.className}`}>
+                <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                {severity.label} — News Context
+              </div>
+            )}
+
             <div className="flex items-center gap-2 mt-2 pt-1.5 border-t border-[#f0ebe4]">
               <TimeStamp iso={msg.timestamp} />
               <button onClick={doCopy} className="ml-auto text-[#b5b0aa] hover:text-[#1a3c2e] transition-colors p-0.5 rounded" title={copied ? 'Copied!' : 'Copy'}>

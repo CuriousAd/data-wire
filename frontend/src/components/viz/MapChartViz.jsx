@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   ComposableMap,
   Geographies,
@@ -10,16 +10,11 @@ import { getScheme } from '../../utils/colorSchemes';
 
 const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
 
-// ISO-3166-1 alpha-3 to numeric mapping (key countries)
-// react-simple-maps uses numeric IDs; we match by NAME via properties.name
-// For simplicity, we'll match by ISO3 in properties if available, else skip
-
-export function MapChartViz({ vizConfig }) {
+export function MapChartViz({ vizConfig, isDark = false }) {
   const scheme = getScheme(vizConfig.color_scheme || 'geo');
   const mapData = vizConfig.map_data || [];
   const [tooltipContent, setTooltipContent] = useState(null);
 
-  // Build lookup: ISO3 → value+tooltip
   const dataMap = {};
   mapData.forEach(d => {
     dataMap[d.country_iso3.toUpperCase()] = d;
@@ -34,10 +29,10 @@ export function MapChartViz({ vizConfig }) {
     .range([scheme.colors[5] + '40', scheme.primary]);
 
   return (
-    <div className="relative rounded-xl overflow-hidden" style={{ height: 320, background: 'rgba(10,15,26,0.8)' }}>
+    <div className="relative rounded-xl overflow-hidden" style={{ height: 320, background: isDark ? 'rgba(10,15,26,0.8)' : '#f8fafc' }}>
       {tooltipContent && (
         <div
-          className="absolute top-3 left-1/2 -translate-x-1/2 glass-strong rounded-lg px-3 py-1.5 text-xs text-slate-300 pointer-events-none z-10 whitespace-nowrap"
+          className={`absolute top-3 left-1/2 -translate-x-1/2 rounded-lg px-3 py-1.5 text-xs pointer-events-none z-10 whitespace-nowrap shadow-md ${isDark ? 'glass-strong text-slate-300' : 'bg-white text-slate-700 border border-[#e5e0da]'}`}
         >
           {tooltipContent}
         </div>
@@ -51,24 +46,23 @@ export function MapChartViz({ vizConfig }) {
           <Geographies geography={GEO_URL}>
             {({ geographies }) =>
               geographies.map(geo => {
-                // Try to match by ISO3 if available in properties
                 const iso3 =
                   geo.properties?.['iso_a3'] ||
                   geo.properties?.['ADM0_A3'] ||
                   geo.properties?.['ISO_A3'] || '';
                 const entry = dataMap[iso3.toUpperCase()];
-                const fill = entry ? colorScale(entry.value) : '#1e2d4a';
+                const fill = entry ? colorScale(entry.value) : (isDark ? '#1e2d4a' : '#e2e8f0');
 
                 return (
                   <Geography
                     key={geo.rsmKey}
                     geography={geo}
                     fill={fill}
-                    stroke="#0a0f1a"
+                    stroke={isDark ? '#0a0f1a' : '#ffffff'}
                     strokeWidth={0.5}
                     style={{
                       default: { outline: 'none', transition: 'fill 0.2s' },
-                      hover: { outline: 'none', fill: entry ? scheme.secondary : '#263555', cursor: entry ? 'pointer' : 'default' },
+                      hover: { outline: 'none', fill: entry ? scheme.secondary : (isDark ? '#263555' : '#cbd5e1'), cursor: entry ? 'pointer' : 'default' },
                       pressed: { outline: 'none' },
                     }}
                     onMouseEnter={() => {
@@ -84,7 +78,7 @@ export function MapChartViz({ vizConfig }) {
       </ComposableMap>
 
       {/* Legend */}
-      <div className="absolute bottom-3 right-3 flex items-center gap-2 text-xs text-slate-500">
+      <div className={`absolute bottom-3 right-3 flex items-center gap-2 text-xs ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>
         <span>{minVal.toLocaleString()}</span>
         <div
           className="w-24 h-2 rounded-full"
