@@ -3,8 +3,6 @@ import random
 from langchain_openrouter import ChatOpenRouter
 from dotenv import load_dotenv
 
-from database.redis import get_redis_client
-
 load_dotenv()
 
 # 4 API keys for OpenRouter load balancing

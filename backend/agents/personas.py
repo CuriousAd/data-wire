@@ -126,7 +126,7 @@ def build_agent_prompt(
                       If provided, used for column stats instead of re-deriving from sample.
     """
 
-    # Strict 25-column cap to protect the 6k token limit for 8B models
+    # Strict 25-column cap to manage prompt token budget
     safe_schema = schema[:25]
     if len(schema) > 25:
         schema_str = "\n".join([f"- {col['column_name']} ({col['column_type']})" for col in safe_schema])
