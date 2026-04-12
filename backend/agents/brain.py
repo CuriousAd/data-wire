@@ -67,6 +67,7 @@ Agent Findings: {findings_str}
 1. Create a cohesive Markdown report summarizing the findings. Use bullet points and headers. Do not repeat raw tool data.
 2. Design ONE corresponding interactive chart (`VizConfig`) that visualizes the core data perfectly. 
    - Fill out `title`, `x_label`, and `y_label` clearly.
+   - Each data point MUST use `label` (string) and `value` (number) fields. Map column names to these fields.
 3. Assign an overall severity (CRITICAL, HIGH, MEDIUM, LOW).
 """
     

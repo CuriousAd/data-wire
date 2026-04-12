@@ -2,11 +2,35 @@ from typing import List, Optional, Literal
 from pydantic import BaseModel, Field
 
 class ChartDataPoint(BaseModel):
-    label: str = Field(description="The X-axis label or category name")
-    value: float = Field(description="The primary numerical value")
+    model_config = {"extra": "allow"}
+    label: Optional[str] = Field(default=None, description="The X-axis label or category name")
+    value: Optional[float] = Field(default=None, description="The primary numerical value")
     value2: Optional[float] = Field(default=None, description="An optional secondary numerical value for comparison")
     group: Optional[str] = Field(default=None, description="Category group for stacked charts or groupings")
     highlighted: bool = Field(default=False, description="Set to true if this point is anomalous or should be highlighted")
+
+    def model_post_init(self, __context):
+        """Auto-map arbitrary LLM fields to label/value when the LLM
+        returns raw column names (e.g. {sector: 'Tech', ratio: 1.2})
+        instead of the canonical {label, value} format."""
+        extras = self.model_extra or {}
+        if self.label is None:
+            # Use the first string-valued extra field as label
+            for k, v in extras.items():
+                if isinstance(v, str):
+                    self.label = v
+                    break
+            # Fallback: stringify the first extra value
+            if self.label is None and extras:
+                self.label = str(next(iter(extras.values())))
+        if self.value is None:
+            # Use first numeric extra field as value
+            for k, v in extras.items():
+                if isinstance(v, (int, float)) and v is not None:
+                    self.value = float(v)
+                    break
+            if self.value is None:
+                self.value = 0.0
 
 class ForecastPoint(BaseModel):
     label: str = Field(description="The future X-axis label (e.g., date)")
