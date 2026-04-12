@@ -23,19 +23,16 @@ class RouteOutput(BaseModel):
     )
 
 def route_query_logic(user_query: str) -> dict:
-    """Uses the Brain LLM to determine active agents."""
-    routing_prompt = f"""You are the master router for a multi-agent AI pipeline.
+    routing_prompt = f"""You are the router for a multi-agent AI pipeline.
     
 User Query: "{user_query}"
 
-Analyze the query and determine the routing.
-Rules:
-- Simple data/stats queries → ['analyst_agent']
-- Future/Growth/Trends/Finance → ['analyst_agent', 'investor_agent']
-- Risk, Regional, Wars, Comparisons → ['analyst_agent', 'investor_agent', 'geo_politics_agent']
-- If General / Unsure → ['analyst_agent', 'investor_agent', 'geo_politics_agent']
+Determine the active agents needed:
+- Simple data point/aggregation (e.g. "What is the average X?") → ['analyst_agent']
+- Trends/Growth/Scenarios → ['analyst_agent', 'investor_agent']
+- Risk/External/Comparisons/Broad → ['analyst_agent', 'investor_agent', 'geo_politics_agent']
 
-Return precisely the structure required.
+DO NOT OVER-ROUTE. Simple queries MUST strictly use only the analyst_agent to save resources.
 """
     structured_llm = brain_llm.with_structured_output(RouteOutput)
     try:
@@ -60,27 +57,17 @@ class SynthesizerOutput(BaseModel):
     )
 
 def synthesize_findings_logic(user_query: str, findings: List[dict]) -> dict:
-    """Consumes all findings from agents and designs the final frontend payload."""
     findings_str = json.dumps(findings, indent=2)
     
-    synth_prompt = f"""You are the Master Synthesizer for Data-Wire.
+    synth_prompt = f"""You are the Master Synthesizer.
     
 User Query: "{user_query}"
+Agent Findings: {findings_str}
 
-Agent Findings:
-{findings_str}
-
-Your Job:
-1. Create a robust, cohesive Markdown report summarizing the multi-perspective insights.
-   - IMPERATIVE: Do NOT just write a wall of text. 
-   - You MUST format your detailed response using structured bullet points under clear Markdown headings (e.g. `### Heading\n- Point 1\n- Point 2`).
-2. Design exactly ONE corresponding interactive chart (VizConfig) that visualizes the core data perfectly in the UI.
-   - IMPERATIVE: You MUST completely populate the `title`, `x_label`, and `y_label` parameters to provide rich, accurate names for the axes (e.g. "Year", "Revenue ($)"). The frontend deeply relies on these exact string labels to render the graph axes, legends, and tooltips correctly.
-3. Assign a risk severity:
-   - CRITICAL: Direct immediate impact.
-   - HIGH: Impact within 3-6 months.
-   - MEDIUM: Indirect or long-term.
-   - LOW: Minimal direct impact.
+1. Create a cohesive Markdown report summarizing the findings. Use bullet points and headers. Do not repeat raw tool data.
+2. Design ONE corresponding interactive chart (`VizConfig`) that visualizes the core data perfectly. 
+   - Fill out `title`, `x_label`, and `y_label` clearly.
+3. Assign an overall severity (CRITICAL, HIGH, MEDIUM, LOW).
 """
     
     structured_llm = brain_llm.with_structured_output(SynthesizerOutput)
