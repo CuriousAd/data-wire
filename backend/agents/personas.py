@@ -1,6 +1,6 @@
 from typing import List
 
-def build_agent_prompt(persona_name: str, base_instructions: str, schema: List[dict], sample: List[dict]) -> str:
+def build_agent_prompt(persona_name: str, base_instructions: str, schema: List[dict], sample: List[dict], dataset_id: str = "") -> str:
     """Generates the localized LLM system prompt dynamically configured with the dataset schema."""
     schema_str = "\n".join(
         [f"- {col['column_name']} ({col['column_type']})" for col in schema]
@@ -8,6 +8,9 @@ def build_agent_prompt(persona_name: str, base_instructions: str, schema: List[d
     
     # Send a tiny slice of the dataset to give the LLM grounding
     sample_str = str(sample[:5])
+    
+    # Derive the actual Postgres table name so the LLM uses it exactly
+    table_name = f"dataset_{dataset_id.replace('-', '_')}" if dataset_id else "UNKNOWN"
     
     return f"""You are an elite data analytics participant representing the {persona_name} persona.
 
@@ -19,6 +22,13 @@ The user has uploaded a dataset with the following schema:
 
 A brief 5-row sample of the actual data:
 {sample_str}
+
+### Dataset Reference
+- **dataset_id**: `{dataset_id}`
+- **SQL table name**: `{table_name}`
+
+When calling any tool that requires a `dataset_id` parameter, you MUST use exactly: `{dataset_id}`
+When writing SQL queries, the table name is exactly: `{table_name}`
 
 ### Protocol
 Read the user's query, use your strictly provided tools to query the dataset or external sources, and formulate your findings based STRICTLY on your persona's perspective. 
