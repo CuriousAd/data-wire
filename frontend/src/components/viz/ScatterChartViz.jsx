@@ -1,10 +1,13 @@
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ZAxis } from 'recharts';
 import { getScheme } from '../../utils/colorSchemes';
 import { CustomTooltip } from './ChartTooltip';
+import { compactNumber } from '../../utils/formatters';
 
 export function ScatterChartViz({ vizConfig }) {
   const scheme = getScheme(vizConfig.color_scheme);
   const raw = vizConfig.data || [];
+  
+  const metricName = vizConfig.y_label || vizConfig.title || 'Data Point';
 
   // Transform to { x, y, highlighted }
   const points = raw.map(d => ({ x: d.value, y: d.value2 ?? 0, label: d.label, highlighted: d.highlighted }));
@@ -16,12 +19,14 @@ export function ScatterChartViz({ vizConfig }) {
         <XAxis
           dataKey="x"
           type="number"
+          tickFormatter={compactNumber}
           tick={{ fill: '#94a3b8', fontSize: 11 }}
           label={vizConfig.x_label ? { value: vizConfig.x_label, position: 'insideBottom', offset: -5, fill: '#64748b', fontSize: 11 } : undefined}
         />
         <YAxis
           dataKey="y"
           type="number"
+          tickFormatter={compactNumber}
           tick={{ fill: '#94a3b8', fontSize: 11 }}
           label={vizConfig.y_label ? { value: vizConfig.y_label, angle: -90, position: 'insideLeft', fill: '#64748b', fontSize: 11 } : undefined}
         />
@@ -31,6 +36,7 @@ export function ScatterChartViz({ vizConfig }) {
           content={<CustomTooltip />}
         />
         <Scatter
+          name={metricName}
           data={points}
           fill={scheme.primary}
           fillOpacity={0.7}

@@ -1,11 +1,15 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { getScheme } from '../../utils/colorSchemes';
 import { CustomTooltip } from './ChartTooltip';
+import { compactNumber } from '../../utils/formatters';
 
 export function AreaChartViz({ vizConfig }) {
   const scheme = getScheme(vizConfig.color_scheme);
   const data = vizConfig.data || [];
   const hasGroups = data.some(d => d.group);
+
+  const metricName = vizConfig.y_label || vizConfig.title || 'Metric';
+  const secondaryName = vizConfig.y_label ? `Secondary ${vizConfig.y_label}` : 'Secondary Metric';
 
   return (
     <ResponsiveContainer width="100%" height={300}>
@@ -32,6 +36,7 @@ export function AreaChartViz({ vizConfig }) {
           label={vizConfig.x_label ? { value: vizConfig.x_label, position: 'insideBottom', offset: -30, fill: '#64748b', fontSize: 11 } : undefined}
         />
         <YAxis
+          tickFormatter={compactNumber}
           tick={{ fill: '#94a3b8', fontSize: 11 }}
           label={vizConfig.y_label ? { value: vizConfig.y_label, angle: -90, position: 'insideLeft', fill: '#64748b', fontSize: 11 } : undefined}
         />
@@ -40,7 +45,7 @@ export function AreaChartViz({ vizConfig }) {
         <Area
           type="monotone"
           dataKey="value"
-          name={vizConfig.y_label || 'Value'}
+          name={metricName}
           stroke={scheme.primary}
           fill="url(#areaGrad1)"
           strokeWidth={2}
@@ -51,7 +56,7 @@ export function AreaChartViz({ vizConfig }) {
           <Area
             type="monotone"
             dataKey="value2"
-            name="Value 2"
+            name={secondaryName}
             stroke={scheme.secondary}
             fill="url(#areaGrad2)"
             strokeWidth={2}

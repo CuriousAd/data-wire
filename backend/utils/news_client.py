@@ -4,22 +4,14 @@ import hashlib
 import structlog
 from urllib.parse import quote_plus
 from tenacity import retry, stop_after_attempt, wait_exponential
-from redis import Redis
 from dotenv import load_dotenv
 
 load_dotenv()
 logger = structlog.get_logger(__name__)
 
 NEWSDATA_API_KEY = os.getenv("NEWSDATA_API_KEY")
-REDIS_URL = os.getenv("REDIS_URL")
 
-# Initialize Redis (Upstash)
-redis_client = None
-if REDIS_URL:
-    try:
-        redis_client = Redis.from_url(REDIS_URL, decode_responses=True)
-    except Exception as e:
-        logger.error("redis.connection_failed", error=str(e))
+from database.redis import get_redis_client
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 def fetch_news_api(query: str):
@@ -40,6 +32,7 @@ def search_news(keywords: list[str], max_results: int = 5) -> str:
     query = " OR ".join(keywords)
     cache_key = f"news:{hashlib.md5(query.encode()).hexdigest()}"
     
+    redis_client = get_redis_client()
     if redis_client:
         cached = redis_client.get(cache_key)
         if cached:

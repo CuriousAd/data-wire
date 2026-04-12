@@ -1,12 +1,16 @@
 import os
 import json
+import warnings
 import pandas as pd
+warnings.filterwarnings('ignore', category=UserWarning, module='pandas')
 from typing import List
 import psycopg2
 from scipy.stats import linregress
 from langchain_core.tools import tool
 from utils.news_client import search_news as fetch_news
 import structlog
+import hashlib
+from database.redis import get_redis_client
 
 logger = structlog.get_logger(__name__)
 DATABASE_URL = os.getenv("DATABASE_URL").replace("+asyncpg", "") # Get sync URL for pandas
@@ -27,20 +31,33 @@ def query_database(sql: str, dataset_id: str) -> str:
     logger.info("tool.query_database", dataset_id=dataset_id, sql=sql[:50])
     
     try:
+        redis_client = get_redis_client()
+        cache_key = f"sql:{dataset_id}:{hashlib.md5(sql.strip().lower().encode()).hexdigest()}"
+        
+        if redis_client:
+            cached = redis_client.get(cache_key)
+            if cached:
+                logger.info("tool.query_database.cache_hit", key=cache_key)
+                return cached
+
         conn = get_sync_conn()
         # pandas read_sql handles the execution and transforms to a dataframe beautifully
         df = pd.read_sql(sql, conn)
         conn.close()
         
         if df.empty:
-            return "No results found."
-        
-        # Limit rows to avoid blowing up the LLM context window limits
-        if len(df) > 50:
-            df_slice = df.head(50)
-            return json.dumps(df_slice.to_dict(orient="records")) + f"\n\n(Truncated. Displaying 50 rows of {len(df)} total rows.)"
+            result_str = "No results found."
+        elif len(df) > 10:
+            df_slice = df.head(10)
+            result_str = df_slice.to_csv(index=False) + f"\n\n(Truncated. Displaying 10 rows of {len(df)} total rows. Refine your SQL to Aggregate/Group By if needed.)"
+        else:
+            result_str = df.to_csv(index=False)
             
-        return json.dumps(df.to_dict(orient="records"))
+        if redis_client:
+            redis_client.setex(cache_key, 3600, result_str)
+            
+        return result_str
+        
     except Exception as e:
         logger.error("tool.query_database.error", error=str(e)[:100])
         return f"Database Error (Retry and fix your SQL): {str(e)}"

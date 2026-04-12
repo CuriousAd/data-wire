@@ -159,26 +159,42 @@ overall geopolitical environment relevant to this dataset.
 # ---------------------------------------------------------------------------
 # Prompt Builder
 # ---------------------------------------------------------------------------
-def _format_sample_as_markdown(sample: List[dict], max_rows: int = 5) -> str:
-    """Converts the first N rows of the data sample into a readable markdown table."""
+def _format_sample_as_markdown(sample: List[dict], max_rows: int = 3, max_cols: int = 15) -> str:
+    """Converts a highly trimmed sample of data into a readable markdown table."""
     rows = sample[:max_rows]
     if not rows:
         return "_No sample data available._"
 
-    headers = list(rows[0].keys())
+    all_headers = list(rows[0].keys())
+    headers = all_headers[:max_cols]
+    omitted = len(all_headers) - len(headers)
+
     # Header row
-    header_line = "| " + " | ".join(str(h) for h in headers) + " |"
-    separator = "| " + " | ".join("---" for _ in headers) + " |"
+    header_line = "| " + " | ".join(str(h) for h in headers)
+    if omitted > 0:
+        header_line += " | *(...)*"
+    header_line += " |"
+
+    separator = "| " + " | ".join("---" for _ in headers)
+    if omitted > 0:
+        separator += " | ---"
+    separator += " |"
+
     # Data rows
     data_lines = []
     for row in rows:
         cells = []
         for h in headers:
             val = row.get(h, "")
-            # Truncate long cell values to keep the prompt compact
             s = str(val)
-            cells.append(s[:60] + "…" if len(s) > 60 else s)
-        data_lines.append("| " + " | ".join(cells) + " |")
+            # Extremely tight truncation for sample cells
+            cells.append(s[:30] + "…" if len(s) > 30 else s)
+        
+        line = "| " + " | ".join(cells)
+        if omitted > 0:
+            line += f" | +{omitted} cols"
+        line += " |"
+        data_lines.append(line)
 
     return "\n".join([header_line, separator] + data_lines)
 
@@ -231,12 +247,16 @@ def build_agent_prompt(
                       If provided, used for column stats instead of re-deriving from sample.
     """
 
-    schema_str = "\n".join(
-        [f"- {col['column_name']} ({col['column_type']})" for col in schema]
-    )
+    # Strict 25-column cap to protect the 6k token limit for 8B models
+    safe_schema = schema[:25]
+    if len(schema) > 25:
+        schema_str = "\n".join([f"- {col['column_name']} ({col['column_type']})" for col in safe_schema])
+        schema_str += f"\n- *(... {len(schema) - 25} more columns omitted for brevity. You can still query them!)*"
+    else:
+        schema_str = "\n".join([f"- {col['column_name']} ({col['column_type']})" for col in schema])
 
     sample_table = _format_sample_as_markdown(sample)
-    column_stats = _format_profile_summary(profile_json or {}, schema)
+    column_stats = _format_profile_summary(profile_json or {}, safe_schema)
 
     # Derive the actual Postgres table name so the LLM uses it exactly
     table_name = f"dataset_{dataset_id.replace('-', '_')}" if dataset_id else "UNKNOWN"
@@ -258,7 +278,7 @@ def build_agent_prompt(
 #### Column Quality Summary (pre-computed by ingestion pipeline)
 {column_stats}
 
-#### Sample Data (first 5 rows)
+#### Sample Data (first 3 rows, truncated)
 {sample_table}
 
 ---
@@ -272,9 +292,10 @@ aggregation, and reasoning.
 ### Mandatory Rules
 1. When calling any tool that requires a `dataset_id` parameter, use exactly: `{dataset_id}`
 2. When writing SQL queries, the table name is exactly: `{table_name}`
-3. **Never guess or hallucinate data.** Always run SQL via `query_database` to verify your claims.
-4. If a query returns unexpected results, re-examine your SQL and retry before giving up.
-5. When you finish your analysis, provide your response in this structure:
+3. **CRITICAL POSTGRES RULE**: You MUST wrap all column names in double quotes in your SQL queries (e.g., `SELECT "currentPrice" FROM...`). Postgres is case-sensitive, and failing to quote camelCase columns will cause your tool to crash.
+4. **Never guess or hallucinate data.** Always run SQL via `query_database` to verify your claims.
+5. If a query returns unexpected results, re-examine your SQL and retry before giving up.
+6. When you finish your analysis, provide your response in this structure:
 
    **Summary**: 2-3 sentence headline of your finding.
 

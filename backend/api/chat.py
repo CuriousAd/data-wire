@@ -6,11 +6,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sse_starlette.sse import EventSourceResponse
 import structlog
+import hashlib
+import re
 
 from database.connection import get_db
+from database.redis import get_redis_client
 from database.models import Dataset, DatasetColumn, DatasetProfile
 from agents.workflow import app_workflow
 from agents.state import DataWireState
+
+def normalize_query(query: str) -> str:
+    query = query.lower()
+    query = re.sub(r'[^a-z0-9\s]', '', query)
+    words = query.split()
+    stop_words = {"what", "is", "the", "a", "an", "of", "and", "in", "to", "show", "me", "give", "tell", "are", "do", "does", "did", "please", "can", "you", "find"}
+    filtered = sorted([w for w in words if w not in stop_words])
+    return "_".join(filtered)
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
@@ -58,8 +69,27 @@ async def chat_endpoint(request: Request, body: ChatRequest, db: AsyncSession = 
         news_severity="LOW"
     )
 
+    norm_text = normalize_query(body.query)
+    cache_key = f"workflow:{body.dataset_id}:{hashlib.md5(norm_text.encode()).hexdigest()}"
+    redis_client = get_redis_client()
+
     async def event_generator():
         try:
+            if redis_client:
+                cached = redis_client.get(cache_key)
+                if cached:
+                    logger.info("workflow.cache_hit", key=cache_key)
+                    yield {
+                        "event": "result",
+                        "data": json.dumps({
+                            "success": True,
+                            "code": "INSIGHTS_GENERATED",
+                            "message": "Insights instantly pulled from semantic cache.",
+                            **json.loads(cached)
+                        })
+                    }
+                    return
+
             # .astream() yields chunks representing the state diff sequentially updated by the nodes
             async for payload in app_workflow.astream(initial_state, stream_mode="updates"):
                 if await request.is_disconnected():
@@ -99,15 +129,22 @@ async def chat_endpoint(request: Request, body: ChatRequest, db: AsyncSession = 
                         # Handle potential Pydantic model vs dict
                         viz_json = viz_config if isinstance(viz_config, dict) else (viz_config.model_dump() if viz_config else None)
                         
+                        out_data = {
+                            "text": state_update.get("final_text"),
+                            "viz": viz_json,
+                            "news_severity": state_update.get("news_severity")
+                        }
+                        
+                        if redis_client:
+                            redis_client.setex(cache_key, 7200, json.dumps(out_data))
+                        
                         yield {
                             "event": "result",
                             "data": json.dumps({
                                 "success": True,
                                 "code": "INSIGHTS_GENERATED",
                                 "message": "Insights successfully derived from the data debate.",
-                                "text": state_update.get("final_text"),
-                                "viz": viz_json,
-                                "news_severity": state_update.get("news_severity")
+                                **out_data
                             })
                         }
                     

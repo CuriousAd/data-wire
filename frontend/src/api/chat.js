@@ -34,6 +34,10 @@ export function streamChat(query, datasetId, callbacks) {
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
+      
+      // These MUST be outside the while loop to persist across TCP chunk boundaries
+      let currentEvent = null;
+      let currentData = '';
 
       while (true) {
         const { done, value } = await reader.read();
@@ -43,14 +47,14 @@ export function streamChat(query, datasetId, callbacks) {
         const lines = buffer.split('\n');
         buffer = lines.pop(); // keep last incomplete chunk
 
-        let currentEvent = null;
-        let currentData = '';
-
-        for (const line of lines) {
+        for (let line of lines) {
+          line = line.replace(/\r$/, ''); // Clean carriage returns from sse-starlette \r\n streams
           if (line.startsWith('event: ')) {
             currentEvent = line.slice(7).trim();
           } else if (line.startsWith('data: ')) {
-            currentData = line.slice(6).trim();
+            // Append data instead of overwrite, to handle multiline SSE data payloads properly
+            const slice = line.slice(6);
+            currentData = currentData ? currentData + '\n' + slice : slice;
           } else if (line === '' && currentEvent && currentData) {
             // Dispatch the event
             try {

@@ -4,10 +4,13 @@ import {
 } from 'recharts';
 import { getScheme } from '../../utils/colorSchemes';
 import { CustomTooltip } from './ChartTooltip';
+import { compactNumber } from '../../utils/formatters';
 
 export function ComposedChartViz({ vizConfig }) {
   const scheme = getScheme(vizConfig.color_scheme);
   const data = vizConfig.data || [];
+  
+  const metricName = vizConfig.y_label || vizConfig.title || 'Metric';
 
   return (
     <ResponsiveContainer width="100%" height={300}>
@@ -28,6 +31,7 @@ export function ComposedChartViz({ vizConfig }) {
           label={vizConfig.x_label ? { value: vizConfig.x_label, position: 'insideBottom', offset: -30, fill: '#64748b', fontSize: 11 } : undefined}
         />
         <YAxis
+          tickFormatter={compactNumber}
           tick={{ fill: '#94a3b8', fontSize: 11 }}
           label={vizConfig.y_label ? { value: vizConfig.y_label, angle: -90, position: 'insideLeft', fill: '#64748b', fontSize: 11 } : undefined}
         />
@@ -36,7 +40,7 @@ export function ComposedChartViz({ vizConfig }) {
         <Area
           type="monotone"
           dataKey="value"
-          name={vizConfig.y_label || 'Value'}
+          name={metricName}
           fill="url(#composedGrad)"
           stroke={scheme.primary}
           strokeWidth={2}

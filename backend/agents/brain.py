@@ -72,7 +72,10 @@ Agent Findings:
 
 Your Job:
 1. Create a robust, cohesive Markdown report summarizing the multi-perspective insights.
+   - IMPERATIVE: Do NOT just write a wall of text. 
+   - You MUST format your detailed response using structured bullet points under clear Markdown headings (e.g. `### Heading\n- Point 1\n- Point 2`).
 2. Design exactly ONE corresponding interactive chart (VizConfig) that visualizes the core data perfectly in the UI.
+   - IMPERATIVE: You MUST completely populate the `title`, `x_label`, and `y_label` parameters to provide rich, accurate names for the axes (e.g. "Year", "Revenue ($)"). The frontend deeply relies on these exact string labels to render the graph axes, legends, and tooltips correctly.
 3. Assign a risk severity:
    - CRITICAL: Direct immediate impact.
    - HIGH: Impact within 3-6 months.

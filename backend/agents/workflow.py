@@ -7,7 +7,7 @@ from agents.state import DataWireState, AgentFinding
 from agents.tools import ANALYST_TOOLS, INVESTOR_TOOLS, GEOPOLITICS_TOOLS
 from agents.personas import ANALYST_PERSONA, INVESTOR_PERSONA, GEOPOLITICS_PERSONA, build_agent_prompt
 from agents.brain import route_query_logic, synthesize_findings_logic
-from utils.llm import agent_llm
+from utils.llm import analyst_llm, investor_llm, geopol_llm
 
 logger = structlog.get_logger(__name__)
 
@@ -25,7 +25,7 @@ def distribute_agents(state: DataWireState):
     """Conditional edge router returning a list of active agents for parallel execution."""
     return state["active_agents"]
 
-def create_agent_node(persona_name: str, base_persona: str, tools: list):
+def create_agent_node(persona_name: str, base_persona: str, tools: list, llm):
     """A factory that dynamically constructs a LangChain react agent node for a given persona."""
     def node(state: DataWireState):
         logger.info("workflow.agent.started", agent=persona_name)
@@ -36,7 +36,7 @@ def create_agent_node(persona_name: str, base_persona: str, tools: list):
         )
         
         # We leverage create_react_agent for robust tool-calling and retry loops
-        agent = create_react_agent(agent_llm, tools=tools, prompt=prompt)
+        agent = create_react_agent(llm, tools=tools, prompt=prompt)
         
         result = agent.invoke({"messages": [HumanMessage(content=state["user_query"])]})
         final_msg = result["messages"][-1].content
@@ -56,9 +56,9 @@ def create_agent_node(persona_name: str, base_persona: str, tools: list):
         
     return node
 
-analyst_node = create_agent_node("Analyst", ANALYST_PERSONA, ANALYST_TOOLS)
-investor_node = create_agent_node("Investor", INVESTOR_PERSONA, INVESTOR_TOOLS)
-geopol_node = create_agent_node("Geo Politics", GEOPOLITICS_PERSONA, GEOPOLITICS_TOOLS)
+analyst_node = create_agent_node("Analyst", ANALYST_PERSONA, ANALYST_TOOLS, analyst_llm)
+investor_node = create_agent_node("Investor", INVESTOR_PERSONA, INVESTOR_TOOLS, investor_llm)
+geopol_node = create_agent_node("Geo Politics", GEOPOLITICS_PERSONA, GEOPOLITICS_TOOLS, geopol_llm)
 
 def synthesizer_node(state: DataWireState):
     """Aggregates parallel findings and generates the final viz and markdown report."""
