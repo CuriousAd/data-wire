@@ -1,7 +1,13 @@
 # Data-Wire
 
+![Data-Wire Logo](docs/logo.png)
 ![Data-Wire Home Page](docs/home_page.png)
 ![Data-Wire Workspace](docs/workspace_chart.png)
+
+## Live Demo
+**Access the platform here:** [https://data-wire-gray.vercel.app/](https://data-wire-gray.vercel.app/)
+
+> **Note on Processing Time:** When you ask a question, please allow **10-15 seconds** for the AI to generate a response. This intentional delay is the time required for our multi-agent architecture (Analyst, Investor, Geopolitical agents) to run deep analytical pipelines, perform statistical reasoning, and produce highly accurate, robust insights and visualizations.
 
 ## Overview
 Data-Wire is a full-stack, multi-agent AI data analytics platform. Upload any CSV file, ask questions in plain English, and receive real-time AI-powered insights with auto-generated visualizations. The platform eliminates the need for specialized data science skills — making advanced data analysis accessible to business users, analysts, and anyone working with data.
@@ -17,6 +23,8 @@ Data-Wire is a full-stack, multi-agent AI data analytics platform. Upload any CS
 - **Redis Caching:** SQL query results and full workflow outputs are cached to minimize redundant API calls.
 
 ## Architecture
+
+![Architecture Design](docs/architecture.png)
 
 ```
 ┌─────────────────┐     SSE Stream      ┌──────────────────────────────────────┐
