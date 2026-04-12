@@ -1,6 +1,6 @@
 # Data-Wire
 
-![Data-Wire Logo](docs/logo.png)
+![Data-Wire Logo](docs/logo.jpeg)
 ![Data-Wire Home Page](docs/home_page.png)
 ![Data-Wire Workspace](docs/workspace_chart.png)
 
@@ -24,7 +24,7 @@ Data-Wire is a full-stack, multi-agent AI data analytics platform. Upload any CS
 
 ## Architecture
 
-![Architecture Design](docs/architecture.png)
+![Architecture Design](docs/architecture.jpeg)
 
 ```
 ┌─────────────────┐     SSE Stream      ┌──────────────────────────────────────┐
