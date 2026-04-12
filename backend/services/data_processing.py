@@ -133,55 +133,66 @@ def bulk_insert_to_postgres(database_url: str, file_path: str, dataset_id: str, 
         
     return table_name
 
-async def process_large_csv_background(file_path: str, dataset_id: str, database_url: str, db_session):
-    """Background task to run ingestion and database bulk insert."""
+async def process_large_csv_background(file_path: str, dataset_id: str, database_url: str):
+    """Background task to run ingestion and database bulk insert.
+    
+    IMPORTANT: This function creates its own DB session because FastAPI's
+    request-scoped session (from Depends(get_db)) is closed by the time
+    the background task runs — using it would silently fail on commit.
+    """
     from database.models import Dataset, DatasetColumn, DatasetProfile
+    from database.connection import AsyncSessionLocal
     from sqlalchemy import select
     
-    try:
-        # 1. Process with DuckDB (extract schema and profile)
-        result = process_csv(file_path, dataset_id)
-        
-        # 2. Update Postgres profile and schema info
-        table_name = bulk_insert_to_postgres(database_url, file_path, dataset_id, result['schema'])
-        
-        # 3. Update DB records
-        dataset_result = await db_session.execute(select(Dataset).where(Dataset.id == dataset_id))
-        dataset = dataset_result.scalar_one_or_none()
-        
-        if dataset:
-            dataset.status = "ready"
-            dataset.row_count = result["row_count"]
-            dataset.column_count = result["column_count"]
-            dataset.table_name = table_name
+    async with AsyncSessionLocal() as db_session:
+        try:
+            # 1. Process with DuckDB (extract schema and profile)
+            result = process_csv(file_path, dataset_id)
             
-            # Insert profile
-            profile = DatasetProfile(
-                dataset_id=dataset_id,
-                profile_json=result["profile"]
-            )
-            db_session.add(profile)
+            # 2. Bulk insert data rows into Postgres
+            table_name = bulk_insert_to_postgres(database_url, file_path, dataset_id, result['schema'])
             
-            # Insert columns
-            for col in result["schema"]:
-                db_col = DatasetColumn(
-                    dataset_id=dataset_id,
-                    name=col['column_name'],
-                    dtype=col['column_type']
-                )
-                db_session.add(db_col)
+            # 3. Update DB records
+            dataset_result = await db_session.execute(select(Dataset).where(Dataset.id == dataset_id))
+            dataset = dataset_result.scalar_one_or_none()
+            
+            if dataset:
+                dataset.status = "ready"
+                dataset.row_count = result["row_count"]
+                dataset.column_count = result["column_count"]
+                dataset.table_name = table_name
                 
-            await db_session.commit()
-            
-    except Exception as e:
-        logger.error("background_process.failed", dataset_id=dataset_id, error=str(e))
-        dataset_result = await db_session.execute(select(Dataset).where(Dataset.id == dataset_id))
-        dataset = dataset_result.scalar_one_or_none()
-        if dataset:
-            dataset.status = "error"
-            dataset.error_message = str(e)
-            await db_session.commit()
-    finally:
-        # Cleanup temp file
-        if os.path.exists(file_path):
-            os.remove(file_path)
+                # Insert profile
+                profile = DatasetProfile(
+                    dataset_id=dataset_id,
+                    profile_json=result["profile"]
+                )
+                db_session.add(profile)
+                
+                # Insert columns
+                for col in result["schema"]:
+                    db_col = DatasetColumn(
+                        dataset_id=dataset_id,
+                        name=col['column_name'],
+                        dtype=col['column_type']
+                    )
+                    db_session.add(db_col)
+                    
+                await db_session.commit()
+                logger.info("background_process.complete", dataset_id=dataset_id, status="ready")
+                
+        except Exception as e:
+            logger.error("background_process.failed", dataset_id=dataset_id, error=str(e))
+            try:
+                dataset_result = await db_session.execute(select(Dataset).where(Dataset.id == dataset_id))
+                dataset = dataset_result.scalar_one_or_none()
+                if dataset:
+                    dataset.status = "error"
+                    dataset.error_message = str(e)[:500]
+                    await db_session.commit()
+            except Exception as inner_e:
+                logger.error("background_process.status_update_failed", dataset_id=dataset_id, error=str(inner_e))
+        finally:
+            # Cleanup temp file
+            if os.path.exists(file_path):
+                os.remove(file_path)

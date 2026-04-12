@@ -1,7 +1,9 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import { Plus, FileSpreadsheet, Loader2, CheckCircle, AlertCircle, Home } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useUpload } from '../../hooks/useUpload';
+import { getDatasetStatus } from '../../api/status';
+import toast from 'react-hot-toast';
 
 const STATUS_CFG = {
   uploading:  { icon: Loader2, color: 'text-amber-600', label: 'Uploading…', spin: true },
@@ -10,10 +12,58 @@ const STATUS_CFG = {
   error:      { icon: AlertCircle, color: 'text-red-500', label: 'Error' },
 };
 
+const POLL_INTERVAL = 2000;
+const MAX_POLL = 150;
+
 export function LeftPanel() {
-  const { datasets, activeDatasetId, switchDataset, resetToHome } = useAppStore();
+  const { datasets, activeDatasetId, switchDataset, resetToHome, updateDataset } = useAppStore();
   const { isUploading, handleUpload } = useUpload();
   const inputRef = useRef(null);
+  const pollRef = useRef(null);
+
+  // Auto-poll any dataset stuck in "processing" — this runs in the workspace
+  // which stays mounted, unlike InputCard which gets unmounted on navigation.
+  useEffect(() => {
+    const processing = datasets.find(d => d.status === 'processing');
+    if (!processing) return;
+
+    let attempts = 0;
+    const poll = async () => {
+      try {
+        const res = await getDatasetStatus(processing.id);
+        if (res.status === 'ready') {
+          updateDataset(processing.id, {
+            status: 'ready',
+            rowCount: res.row_count,
+            columnCount: res.column_count,
+            profile: res.profile,
+          });
+          toast.success('Dataset ready!');
+          return;
+        }
+        if (res.status === 'error') {
+          updateDataset(processing.id, { status: 'error' });
+          toast.error(res.message || 'Processing failed.');
+          return;
+        }
+        attempts++;
+        if (attempts >= MAX_POLL) {
+          updateDataset(processing.id, { status: 'error' });
+          toast.error('Processing timed out.');
+          return;
+        }
+        pollRef.current = setTimeout(poll, POLL_INTERVAL);
+      } catch (err) {
+        updateDataset(processing.id, { status: 'error' });
+        toast.error(err.message || 'Status check failed.');
+      }
+    };
+    pollRef.current = setTimeout(poll, POLL_INTERVAL);
+
+    return () => {
+      if (pollRef.current) clearTimeout(pollRef.current);
+    };
+  }, [datasets, updateDataset]);
 
   const onFile = useCallback((e) => {
     const f = e.target.files?.[0];

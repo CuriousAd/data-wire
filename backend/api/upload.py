@@ -46,7 +46,7 @@ async def upload_csv(
     # For smaller files, we could do it synchronously, but since DuckDB 
     # and Postgres copy takes some IO, we offload to background task to avoid blocking the API loop.
     logger.info("upload.scheduled", dataset_id=dataset.id, size=file_size)
-    background_tasks.add_task(process_large_csv_background, file_path, dataset.id, DATABASE_URL, db)
+    background_tasks.add_task(process_large_csv_background, file_path, dataset.id, DATABASE_URL)
     
     return {
         "success": True,

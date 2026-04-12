@@ -4,7 +4,7 @@
 Data-Wire is a full-stack, multi-agent AI data analytics platform. Upload any CSV file, ask questions in plain English, and receive real-time AI-powered insights with auto-generated visualizations. The platform eliminates the need for specialized data science skills — making advanced data analysis accessible to business users, analysts, and anyone working with data.
 
 ## Features
-- **CSV Data Ingestion:** Upload CSV files (up to 100MB) for automated profiling and analysis.
+- **CSV Data Ingestion:** Upload CSV files for automated profiling and analysis.
 - **Natural Language Queries:** Ask plain English questions about the uploaded data.
 - **Multi-Agent Pipeline:** LangGraph orchestrates specialized AI agents (Analyst, Investor, Geopolitical) that debate and synthesize insights.
 - **Smart Routing:** Simple queries are routed to a single agent; complex queries trigger the full multi-agent debate — optimizing API usage.
@@ -85,18 +85,10 @@ npm install
 npm run dev
 ```
 
-### 4. Access the Application
+### 4. Access the Application (Local)
 - **Frontend:** `http://localhost:5173`
 
 Press **Ctrl+C** in the terminal to stop both servers.
-
-## Tech Stack
-- **Frontend:** React 19, Vite, Tailwind CSS, Recharts, React-Markdown.
-- **Backend:** FastAPI, Python 3.11+, Uvicorn, SSE-Starlette.
-- **AI / Data:** LangGraph, LangChain-Groq (Llama 3.3), DuckDB, Pandas, ydata-profiling.
-- **Database / Cache:** Supabase (asyncpg / PostgreSQL), Upstash Redis (TLS).
-- **External Services:** NewsData.io API.
-- **Deployment:** Render (Backend).
 
 ## Usage Examples
 
@@ -128,10 +120,9 @@ curl -X 'GET' 'http://localhost:8000/health'
 The system utilizes a React/Vite web client communicating with a Python FastAPI backend. The frontend consumes Server-Sent Events (SSE) to display responses piecemeal as they are generated. The backend processes the CSV with DuckDB for fast analytics, securely queries an LLM routing intent, and delegates tasks to a LangGraph multi-agent pipeline. Redis is used to preserve transient state while Supabase persists metadata.
 
 ## Limitations
-- Only CSV file format is currently supported for data upload (max 100MB).
+- Only CSV file format is currently supported for data upload.
 - OpenRouter free tier rate limits constrain throughput (~30-50 queries/day without credits).
 - The NewsData.io free tier may rate-limit intensive geopolitical correlation queries.
-- Linear regression is the only forecasting method currently available.
 
 ## Future Improvements
 - Support for additional file formats (Excel, JSON, Parquet).

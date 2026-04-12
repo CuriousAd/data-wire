@@ -1,23 +1,13 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { uploadCSV } from '../api/upload';
-import { getDatasetStatus } from '../api/status';
 import { useAppStore } from '../store/appStore';
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
-const POLL_INTERVAL_MS = 2000;
-const MAX_POLL_ATTEMPTS = 150;
 
 export function useUpload() {
   const [isUploading, setIsUploading] = useState(false);
-  const { goToWorkspace, updateDataset } = useAppStore();
-  const pollTimerRef = useRef(null);
-
-  useEffect(() => {
-    return () => {
-      if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
-    };
-  }, []);
+  const { goToWorkspace } = useAppStore();
 
   const validateFile = (file) => {
     if (!file.name.toLowerCase().endsWith('.csv')) {
@@ -40,46 +30,13 @@ export function useUpload() {
       const data = await uploadCSV(file);
       toast.success('Upload complete — processing…', { id: tid });
       goToWorkspace(data.dataset_id, file.name);
-      startPolling(data.dataset_id);
+      // Polling is handled by LeftPanel which stays mounted in workspace
     } catch (err) {
       toast.error(err.message || 'Upload failed.', { id: tid, duration: 6000 });
+    } finally {
       setIsUploading(false);
     }
   }, [goToWorkspace]);
-
-  const startPolling = useCallback(async (datasetId) => {
-    let attempts = 0;
-    const poll = async () => {
-      try {
-        const status = await getDatasetStatus(datasetId);
-        if (status.status === 'ready') {
-          updateDataset(datasetId, { status: 'ready', rowCount: status.row_count, columnCount: status.column_count, profile: status.profile });
-          setIsUploading(false);
-          toast.success('Dataset ready!');
-          return;
-        }
-        if (status.status === 'error') {
-          updateDataset(datasetId, { status: 'error' });
-          toast.error(status.message || 'Processing failed.');
-          setIsUploading(false);
-          return;
-        }
-        attempts++;
-        if (attempts >= MAX_POLL_ATTEMPTS) {
-          updateDataset(datasetId, { status: 'error' });
-          toast.error('Processing timed out.');
-          setIsUploading(false);
-          return;
-        }
-        pollTimerRef.current = setTimeout(poll, POLL_INTERVAL_MS);
-      } catch (err) {
-        updateDataset(datasetId, { status: 'error' });
-        toast.error(err.message || 'Status check failed.');
-        setIsUploading(false);
-      }
-    };
-    pollTimerRef.current = setTimeout(poll, POLL_INTERVAL_MS);
-  }, [updateDataset]);
 
   return { isUploading, handleUpload };
 }
