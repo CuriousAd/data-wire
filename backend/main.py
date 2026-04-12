@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
 from backend.database.connection import init_db
-from backend.api import upload, status
+from backend.api import upload, status, chat
 
 load_dotenv()
 logger = structlog.get_logger(__name__)
@@ -44,6 +44,7 @@ app.add_middleware(
 # Include routers
 app.include_router(upload.router)
 app.include_router(status.router)
+app.include_router(chat.router)
 
 @app.get("/health")
 async def health_check():

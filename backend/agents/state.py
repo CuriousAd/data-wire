@@ -1,4 +1,5 @@
-from typing import TypedDict, List, Optional, Any, Literal
+from typing import TypedDict, List, Optional, Any, Literal, Annotated
+import operator
 from langchain_core.messages import BaseMessage
 
 class NewsItem(TypedDict):
@@ -26,7 +27,7 @@ class DataWireState(TypedDict):
     query_type: str
     active_agents: List[str]
     extracted_keywords: List[str]
-    agent_findings: List[AgentFinding]
+    agent_findings: Annotated[List[AgentFinding], operator.add]
     debate_round: int
     final_text: str
     final_viz: Optional[dict]
