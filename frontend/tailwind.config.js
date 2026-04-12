@@ -37,6 +37,11 @@ export default {
         'glow-pulse': 'glowPulse 2s ease-in-out infinite',
         'spin-slow': 'spin 3s linear infinite',
         'shimmer': 'shimmer 2s linear infinite',
+        'orbit': 'orbitSpin 3s linear infinite',
+        'step-reveal': 'stepReveal 0.35s cubic-bezier(0.16,1,0.3,1) both',
+        'float-badge': 'floatBadge 3s ease-in-out infinite',
+        'send-pulse': 'sendPulse 2s ease-in-out infinite',
+        'border-glow': 'borderGlow 2s ease-in-out infinite',
       },
       keyframes: {
         bounceDots: {
@@ -62,6 +67,26 @@ export default {
         shimmer: {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
+        },
+        orbitSpin: {
+          from: { transform: 'rotate(0deg) translateX(52px) rotate(0deg)' },
+          to:   { transform: 'rotate(360deg) translateX(52px) rotate(-360deg)' },
+        },
+        stepReveal: {
+          from: { opacity: '0', transform: 'translateX(-8px)' },
+          to:   { opacity: '1', transform: 'translateX(0)' },
+        },
+        floatBadge: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%':       { transform: 'translateY(-3px)' },
+        },
+        sendPulse: {
+          '0%, 100%': { boxShadow: '0 0 16px rgba(34,211,238,0.25)' },
+          '50%':       { boxShadow: '0 0 28px rgba(34,211,238,0.55), 0 0 8px rgba(139,92,246,0.3)' },
+        },
+        borderGlow: {
+          '0%, 100%': { borderColor: 'rgba(34,211,238,0.2)' },
+          '50%':       { borderColor: 'rgba(34,211,238,0.5)' },
         },
       },
       backgroundSize: {
