@@ -1,31 +1,47 @@
 import { createContext, useContext, useState, useCallback } from 'react';
 
-// App-level state shape:
-// screen: 'upload' | 'processing' | 'chat'
-// dataset: { id, filename, rowCount, columnCount, profile } | null
-// messages: array of chat message objects
-
 const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
-  const [screen, setScreen] = useState('upload');
-  const [dataset, setDataset] = useState(null);
+  const [screen, setScreen] = useState('home'); // 'home' | 'workspace'
+  const [datasets, setDatasets] = useState([]);
+  const [activeDatasetId, setActiveDatasetId] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [centerItems, setCenterItems] = useState([]); // [{ id, type:'viz'|'dataset', content, title }]
 
-  const goToProcessing = useCallback((datasetId, filename) => {
-    setDataset({ id: datasetId, filename, rowCount: null, columnCount: null, profile: null });
-    setScreen('processing');
-  }, []);
+  const activeDataset = datasets.find(d => d.id === activeDatasetId) || null;
 
-  const goToChat = useCallback((datasetInfo) => {
-    setDataset(prev => ({ ...prev, ...datasetInfo }));
-    setScreen('chat');
-  }, []);
-
-  const resetToUpload = useCallback(() => {
-    setScreen('upload');
-    setDataset(null);
+  const goToWorkspace = useCallback((datasetId, filename) => {
+    setDatasets(prev => [...prev, { id: datasetId, filename, rowCount: null, columnCount: null, profile: null, status: 'processing' }]);
+    setActiveDatasetId(datasetId);
     setMessages([]);
+    setCenterItems([]);
+    setScreen('workspace');
+  }, []);
+
+  const updateDataset = useCallback((datasetId, updates) => {
+    setDatasets(prev => prev.map(d => d.id === datasetId ? { ...d, ...updates } : d));
+  }, []);
+
+  const switchDataset = useCallback((datasetId) => {
+    // TODO: cache current messages to Redis before clearing
+    setActiveDatasetId(datasetId);
+    setMessages([]);
+    setCenterItems([]);
+  }, []);
+
+  const addCenterItem = useCallback((item) => {
+    setCenterItems(prev => [...prev, { id: crypto.randomUUID(), ...item }]);
+  }, []);
+
+  const clearCenter = useCallback(() => { setCenterItems([]); }, []);
+
+  const resetToHome = useCallback(() => {
+    setScreen('home');
+    setDatasets([]);
+    setActiveDatasetId(null);
+    setMessages([]);
+    setCenterItems([]);
   }, []);
 
   const addMessage = useCallback((msg) => {
@@ -43,8 +59,9 @@ export function AppProvider({ children }) {
 
   return (
     <AppContext.Provider value={{
-      screen, dataset, messages,
-      goToProcessing, goToChat, resetToUpload,
+      screen, datasets, activeDatasetId, activeDataset, messages, centerItems,
+      goToWorkspace, updateDataset, switchDataset, setActiveDatasetId,
+      addCenterItem, clearCenter, resetToHome,
       addMessage, updateLastMessage,
     }}>
       {children}

@@ -1,16 +1,12 @@
 import { Toaster } from 'react-hot-toast';
 import { AppProvider, useAppStore } from './store/appStore';
-import { UploadZone } from './components/upload/UploadZone';
-import { ProcessingScreen } from './components/upload/ProcessingScreen';
-import { ChatContainer } from './components/chat/ChatContainer';
+import { HomePage } from './components/home/HomePage';
+import { WorkspaceLayout } from './components/workspace/WorkspaceLayout';
 
 function AppRouter() {
   const { screen } = useAppStore();
-
-  if (screen === 'upload') return <UploadZone />;
-  if (screen === 'processing') return <ProcessingScreen />;
-  if (screen === 'chat') return <ChatContainer />;
-  return <UploadZone />;
+  if (screen === 'workspace') return <WorkspaceLayout />;
+  return <HomePage />;
 }
 
 export default function App() {
@@ -22,32 +18,16 @@ export default function App() {
         toastOptions={{
           duration: 4000,
           style: {
-            background: '#0f1728',
-            color: '#e2e8f0',
-            border: '1px solid rgba(34, 211, 238, 0.15)',
+            background: '#1a3c2e',
+            color: '#f5f2ed',
+            border: '1px solid rgba(223,238,230,0.2)',
             borderRadius: '12px',
-            fontSize: '14px',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+            fontSize: '13px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
           },
-          success: {
-            iconTheme: {
-              primary: '#22c55e',
-              secondary: '#0f1728',
-            },
-          },
-          error: {
-            iconTheme: {
-              primary: '#ef4444',
-              secondary: '#0f1728',
-            },
-            duration: 6000,
-          },
-          loading: {
-            iconTheme: {
-              primary: '#22d3ee',
-              secondary: '#0f1728',
-            },
-          },
+          success: { iconTheme: { primary: '#34d399', secondary: '#1a3c2e' } },
+          error: { iconTheme: { primary: '#f87171', secondary: '#1a3c2e' }, duration: 6000 },
+          loading: { iconTheme: { primary: '#dfeee6', secondary: '#1a3c2e' } },
         }}
       />
     </AppProvider>
