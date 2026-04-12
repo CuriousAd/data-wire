@@ -1,4 +1,5 @@
 import os
+import logging
 from contextlib import asynccontextmanager
 import structlog
 from fastapi import FastAPI
@@ -9,16 +10,44 @@ from backend.database.connection import init_db
 from backend.api import upload, status, chat
 
 load_dotenv()
-logger = structlog.get_logger(__name__)
 
-# Apply structlog config
+# -------------------------------------------------------
+# Structured Logging Configuration
+# Set LOG_FORMAT=json in production; defaults to colored dev output
+# -------------------------------------------------------
+LOG_FORMAT = os.getenv("LOG_FORMAT", "dev")
+
+shared_processors = [
+    structlog.contextvars.merge_contextvars,
+    structlog.stdlib.add_log_level,
+    structlog.stdlib.add_logger_name,
+    structlog.processors.TimeStamper(fmt="%H:%M:%S"),
+    structlog.processors.StackInfoRenderer(),
+    structlog.processors.UnicodeDecoder(),
+]
+
+if LOG_FORMAT == "json":
+    # Production: machine-readable JSON lines
+    shared_processors.append(structlog.processors.JSONRenderer())
+else:
+    # Development: colorful, human-readable console output
+    shared_processors.append(structlog.dev.ConsoleRenderer(
+        colors=True,
+        exception_formatter=structlog.dev.plain_traceback,
+    ))
+
 structlog.configure(
-    processors=[
-        structlog.stdlib.add_log_level,
-        structlog.processors.TimeStamper(fmt="iso"),
-        structlog.processors.JSONRenderer()
-    ]
+    processors=shared_processors,
+    wrapper_class=structlog.stdlib.BoundLogger,
+    context_class=dict,
+    logger_factory=structlog.PrintLoggerFactory(),
+    cache_logger_on_first_use=True,
 )
+
+# Also route standard library logging (uvicorn, sqlalchemy) through structlog
+logging.basicConfig(format="%(message)s", level=logging.INFO)
+
+logger = structlog.get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
