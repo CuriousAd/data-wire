@@ -35,7 +35,7 @@ export function InputCard() {
   const canStart = !!selectedFile && !isUploading;
 
   return (
-    <div className="bg-white rounded-[22px] p-7 pb-8 shadow-[0_2px_24px_rgba(0,0,0,0.05)] border border-[#e8e3dd] max-w-[520px] flex flex-col min-h-[320px]">
+    <div className="bg-white rounded-[22px] p-7 pb-8 shadow-[0_2px_24px_rgba(0,0,0,0.05)] border border-[#e8e3dd] max-w-[520px] flex flex-col min-h-[248px]">
       <input
         ref={fileInputRef}
         type="file"
@@ -72,21 +72,20 @@ export function InputCard() {
       )}
 
       {/* Example */}
-      <p className="text-[12px] text-[#8a8580] mb-8 leading-relaxed">
+      <p className="text-[12px] text-[#8a8580] mb-5 leading-relaxed">
         Example: If a product raises its price next quarter, how will customer
         sentiment and narrative spread change?
       </p>
 
       {/* Buttons row */}
-      <div className="flex items-center gap-3 mt-auto">
+      <div className="flex items-center gap-3">
         <button
           onClick={handleStartChat}
           disabled={!canStart}
-          className={`px-5 py-2 rounded-full text-[13px] font-medium transition-all flex items-center gap-1.5 ${
-            canStart
-              ? 'bg-[#1a3c2e] text-white hover:bg-[#142e23] shadow-sm'
-              : 'bg-[#c2c2c2] text-white cursor-not-allowed'
-          }`}
+          className={`px-5 py-2 rounded-full text-[13px] font-medium transition-all flex items-center gap-1.5 ${canStart
+            ? 'bg-[#1a3c2e] text-white hover:bg-[#142e23] shadow-sm'
+            : 'bg-[#c2c2c2] text-white cursor-not-allowed'
+            }`}
           id="start-chat-btn"
         >
           {isUploading ? 'Uploading…' : 'Start Chat'}{' '}

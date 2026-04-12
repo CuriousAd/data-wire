@@ -1,37 +1,35 @@
-const FEATURES = [
-  {
-    title: 'Text-first',
-    description:
-      'Start with a question, then decide whether supporting files are necessary without losing the speed of chat.',
-  },
-  {
-    title: 'Multi-agent',
-    description:
-      'Run graph building, simulation, and reporting behind the scenes while keeping the user inside a single conversation.',
-  },
-  {
-    title: 'Result cards',
-    description:
-      'Drop a structured result card below each answer with a summary, report entry point, and follow-up path.',
-  },
+import { Upload, Brain, BarChart3, ChevronRight } from 'lucide-react';
+
+const STEPS = [
+  { icon: Upload, label: 'Upload CSV', accent: '#1a3c2e' },
+  { icon: Brain, label: 'AI Agents Analyze', accent: '#2d5a45' },
+  { icon: BarChart3, label: 'Insights & Charts', accent: '#3a7159' },
 ];
 
 export function FeatureCards() {
   return (
-    <div className="grid grid-cols-3 gap-3.5">
-      {FEATURES.map((feature, i) => (
-        <div
-          key={i}
-          className="bg-white/75 rounded-[20px] p-5 border border-[#e0dbd5]"
-        >
-          <h3 className="font-serif text-[21px] font-bold text-[#1a1a1a] mb-3 leading-[1.15]">
-            {feature.title}
-          </h3>
-          <p className="text-[12px] text-[#7a7a7a] leading-[1.65]">
-            {feature.description}
-          </p>
-        </div>
-      ))}
+    <div className="bg-white/75 rounded-[20px] p-5 border border-[#e0dbd5]">
+      <p className="text-[9px] font-semibold tracking-[0.18em] uppercase text-[#a8a29e] mb-4">
+        How It Works
+      </p>
+      <div className="flex items-center justify-between gap-2">
+        {STEPS.map((step, i) => (
+          <div key={i} className="flex items-center gap-2 flex-1 min-w-0">
+            <div
+              className="flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0"
+              style={{ backgroundColor: step.accent + '12' }}
+            >
+              <step.icon size={16} style={{ color: step.accent }} />
+            </div>
+            <span className="text-[12px] font-medium text-[#1a1a1a] leading-tight">
+              {step.label}
+            </span>
+            {i < STEPS.length - 1 && (
+              <ChevronRight size={14} className="text-[#c5c0ba] flex-shrink-0 ml-auto" />
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
