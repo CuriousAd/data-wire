@@ -1,5 +1,8 @@
 # Data-Wire
 
+![Data-Wire Home Page](docs/home_page.png)
+![Data-Wire Workspace](docs/workspace_chart.png)
+
 ## Overview
 Data-Wire is a full-stack, multi-agent AI data analytics platform. Upload any CSV file, ask questions in plain English, and receive real-time AI-powered insights with auto-generated visualizations. The platform eliminates the need for specialized data science skills — making advanced data analysis accessible to business users, analysts, and anyone working with data.
 
