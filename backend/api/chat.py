@@ -27,7 +27,7 @@ async def chat_endpoint(request: Request, body: ChatRequest, db: AsyncSession = 
     dataset = dataset_result.scalar_one_or_none()
     
     if not dataset or dataset.status != "ready":
-        raise HTTPException(status_code=400, detail="Dataset not found or not ready.")
+        raise HTTPException(status_code=400, detail={"message": "Dataset not found or not ready.", "code": "DATASET_NOT_READY"})
         
     # Get schema manually from db so LLM knows columns
     cols_result = await db.execute(select(DatasetColumn).where(DatasetColumn.dataset_id == body.dataset_id))
@@ -96,6 +96,9 @@ async def chat_endpoint(request: Request, body: ChatRequest, db: AsyncSession = 
                         yield {
                             "event": "result",
                             "data": json.dumps({
+                                "success": True,
+                                "code": "INSIGHTS_GENERATED",
+                                "message": "Insights successfully derived from the data debate.",
                                 "text": state_update.get("final_text"),
                                 "viz": viz_json,
                                 "news_severity": state_update.get("news_severity")
@@ -109,7 +112,12 @@ async def chat_endpoint(request: Request, body: ChatRequest, db: AsyncSession = 
             logger.error("sse.stream_failed", error=str(e))
             yield {
                 "event": "error",
-                "data": json.dumps({"message": str(e)})
+                "data": json.dumps({
+                    "success": False,
+                    "code": "AI_ENGINE_ERROR",
+                    "message": "The AI reasoning pipeline encountered garbled output or a processing error. Please try rephrasing your request.",
+                    "details": str(e)
+                })
             }
 
     return EventSourceResponse(event_generator())

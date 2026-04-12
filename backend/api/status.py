@@ -14,7 +14,7 @@ async def get_dataset_status(dataset_id: str, db: AsyncSession = Depends(get_db)
     dataset = result.scalar_one_or_none()
     
     if not dataset:
-        raise HTTPException(status_code=404, detail="Dataset not found")
+        raise HTTPException(status_code=404, detail={"message": "Dataset not found", "code": "DATASET_NOT_FOUND"})
         
     response = {
         "id": dataset.id,
@@ -23,10 +23,16 @@ async def get_dataset_status(dataset_id: str, db: AsyncSession = Depends(get_db)
     }
     
     if dataset.status == "error":
-        response["error"] = dataset.error_message
+        response["success"] = False
+        response["code"] = "PIPELINE_ERROR"
+        response["message"] = "The dataset processing pipeline failed to parse your file. Please ensure it's a valid CSV."
+        response["error_details"] = dataset.error_message
         return response
         
     if dataset.status == "ready":
+        response["success"] = True
+        response["code"] = "DATASET_READY"
+        response["message"] = "Dataset processed and analyzed successfully! You can now start querying."
         response["row_count"] = dataset.row_count
         response["column_count"] = dataset.column_count
         

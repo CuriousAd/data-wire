@@ -27,7 +27,7 @@ async def upload_csv(
     file.file.seek(0)
     
     if file_size > MAX_FILE_SIZE:
-        raise HTTPException(status_code=413, detail=f"File too large. Maximum size is 100MB.")
+        raise HTTPException(status_code=413, detail={"message": "The uploaded CSV exceeds the 100MB capacity limit. Please compress or trim your dataset.", "code": "FILE_TOO_LARGE"})
         
     dataset = Dataset(original_filename=file.filename, filename=file.filename, status="processing")
     db.add(dataset)
@@ -49,7 +49,8 @@ async def upload_csv(
     background_tasks.add_task(process_large_csv_background, file_path, dataset.id, DATABASE_URL, db)
     
     return {
-        "status": "processing",
-        "dataset_id": dataset.id,
-        "message": "File uploaded and is being processed."
+        "success": True,
+        "code": "UPLOAD_SUCCESS",
+        "message": "File uploaded successfully! Background processing initiated.",
+        "dataset_id": dataset.id
     }

@@ -2,7 +2,8 @@ import os
 import logging
 from contextlib import asynccontextmanager
 import structlog
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
@@ -59,6 +60,26 @@ async def lifespan(app: FastAPI):
     logger.info("system.shutdown")
 
 app = FastAPI(title="Data-Wire API", lifespan=lifespan)
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    # If the detail is already a dict (our standard format), use it. Otherwise wrap it.
+    if isinstance(exc.detail, dict) and "code" in exc.detail:
+        payload = {"success": False, "code": exc.detail.get("code"), "message": exc.detail.get("message")}
+    else:
+        payload = {"success": False, "code": "HTTP_ERROR", "message": str(exc.detail)}
+    return JSONResponse(status_code=exc.status_code, content=payload)
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    logger.error("system.unhandled_exception", error=str(exc))
+    payload = {
+        "success": False,
+        "code": "INTERNAL_SERVER_ERROR",
+        "message": "A critical system error occurred.",
+        "details": str(exc)
+    }
+    return JSONResponse(status_code=500, content=payload)
 
 # CORS configuration
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
