@@ -258,6 +258,14 @@ def build_agent_prompt(
     sample_table = _format_sample_as_markdown(sample)
     column_stats = _format_profile_summary(profile_json or {}, safe_schema)
 
+    # Only include sample section if we actually have sample data to show
+    sample_section = ""
+    if sample:
+        sample_section = f"""
+#### Sample Data (first 3 rows, truncated)
+{sample_table}
+"""
+
     # Derive the actual Postgres table name so the LLM uses it exactly
     table_name = f"dataset_{dataset_id.replace('-', '_')}" if dataset_id else "UNKNOWN"
 
@@ -277,9 +285,7 @@ def build_agent_prompt(
 
 #### Column Quality Summary (pre-computed by ingestion pipeline)
 {column_stats}
-
-#### Sample Data (first 3 rows, truncated)
-{sample_table}
+{sample_section}
 
 ---
 

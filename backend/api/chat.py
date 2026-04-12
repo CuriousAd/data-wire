@@ -75,20 +75,25 @@ async def chat_endpoint(request: Request, body: ChatRequest, db: AsyncSession = 
 
     async def event_generator():
         try:
+            # Check workflow cache — wrapped in its own try/except so a dead Redis
+            # connection degrades gracefully instead of killing the pipeline
             if redis_client:
-                cached = redis_client.get(cache_key)
-                if cached:
-                    logger.info("workflow.cache_hit", key=cache_key)
-                    yield {
-                        "event": "result",
-                        "data": json.dumps({
-                            "success": True,
-                            "code": "INSIGHTS_GENERATED",
-                            "message": "Insights instantly pulled from semantic cache.",
-                            **json.loads(cached)
-                        })
-                    }
-                    return
+                try:
+                    cached = redis_client.get(cache_key)
+                    if cached:
+                        logger.info("workflow.cache_hit", key=cache_key)
+                        yield {
+                            "event": "result",
+                            "data": json.dumps({
+                                "success": True,
+                                "code": "INSIGHTS_GENERATED",
+                                "message": "Insights instantly pulled from semantic cache.",
+                                **json.loads(cached)
+                            })
+                        }
+                        return
+                except Exception:
+                    logger.warning("workflow.cache_read_failed", key=cache_key)
 
             # .astream() yields chunks representing the state diff sequentially updated by the nodes
             async for payload in app_workflow.astream(initial_state, stream_mode="updates"):
@@ -136,7 +141,10 @@ async def chat_endpoint(request: Request, body: ChatRequest, db: AsyncSession = 
                         }
                         
                         if redis_client:
-                            redis_client.setex(cache_key, 7200, json.dumps(out_data))
+                            try:
+                                redis_client.setex(cache_key, 7200, json.dumps(out_data))
+                            except Exception:
+                                logger.warning("workflow.cache_write_failed", key=cache_key)
                         
                         yield {
                             "event": "result",
@@ -158,8 +166,7 @@ async def chat_endpoint(request: Request, body: ChatRequest, db: AsyncSession = 
                 "data": json.dumps({
                     "success": False,
                     "code": "AI_ENGINE_ERROR",
-                    "message": "The AI reasoning pipeline encountered garbled output or a processing error. Please try rephrasing your request.",
-                    "details": str(e)
+                    "message": "The AI reasoning pipeline encountered a processing error. Please try rephrasing your request."
                 })
             }
 

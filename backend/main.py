@@ -76,8 +76,7 @@ async def general_exception_handler(request: Request, exc: Exception):
     payload = {
         "success": False,
         "code": "INTERNAL_SERVER_ERROR",
-        "message": "A critical system error occurred.",
-        "details": str(exc)
+        "message": "A critical system error occurred. Please try again."
     }
     return JSONResponse(status_code=500, content=payload)
 

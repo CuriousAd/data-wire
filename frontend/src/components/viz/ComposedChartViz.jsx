@@ -11,6 +11,7 @@ export function ComposedChartViz({ vizConfig }) {
   const data = vizConfig.data || [];
   
   const metricName = vizConfig.y_label || vizConfig.title || 'Metric';
+  const secondaryName = vizConfig.y_label ? `Secondary ${vizConfig.y_label}` : 'Secondary Metric';
 
   return (
     <ResponsiveContainer width="100%" height={300}>
@@ -47,7 +48,7 @@ export function ComposedChartViz({ vizConfig }) {
           dot={false}
         />
         {data.some(d => d.value2 != null) && (
-          <Bar dataKey="value2" name="Volume" fill={scheme.secondary} opacity={0.7} radius={[3, 3, 0, 0]} />
+          <Bar dataKey="value2" name={secondaryName} fill={scheme.secondary} opacity={0.7} radius={[3, 3, 0, 0]} />
         )}
       </ComposedChart>
     </ResponsiveContainer>
