@@ -55,6 +55,37 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("system.startup")
     await init_db()
+    
+    # Self-heal: reset datasets stuck in "processing" after a crash/restart.
+    # If Render restarts mid-processing, background tasks are lost and datasets
+    # remain permanently stuck. This cleanup runs on every boot.
+    try:
+        from database.connection import AsyncSessionLocal
+        from database.models import Dataset
+        from sqlalchemy import select, update
+        from datetime import datetime, timedelta
+        
+        async with AsyncSessionLocal() as session:
+            cutoff = datetime.utcnow() - timedelta(minutes=10)
+            stmt = (
+                update(Dataset)
+                .where(Dataset.status == "processing")
+                .where(Dataset.created_at < cutoff)
+                .values(
+                    status="error",
+                    error_message="Processing was interrupted by a server restart. Please re-upload the file."
+                )
+            )
+            result = await session.execute(stmt)
+            await session.commit()
+            
+            if result.rowcount > 0:
+                logger.warning("system.stale_cleanup", count=result.rowcount,
+                             message=f"Reset {result.rowcount} stale datasets from 'processing' to 'error'")
+    except Exception as e:
+        # Non-fatal: don't prevent startup if cleanup fails
+        logger.warning("system.stale_cleanup.failed", error=str(e))
+    
     yield
     # Shutdown
     logger.info("system.shutdown")

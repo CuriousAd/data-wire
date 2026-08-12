@@ -1,7 +1,6 @@
 import os
 import duckdb
 import pandas as pd
-from ydata_profiling import ProfileReport
 import psycopg2
 from urllib.parse import urlparse
 import structlog
@@ -52,6 +51,8 @@ def process_csv(file_path: str, dataset_id: str):
 
 def profile_data(sample_df: pd.DataFrame) -> dict:
     """Runs a minimal profile report to extract basic statistics."""
+    # Lazy-load ydata-profiling to avoid ~200MB memory overhead at startup
+    from ydata_profiling import ProfileReport
     profile = ProfileReport(sample_df, minimal=True, explorative=False)
     # Get JSON output from description setup
     desc = profile.get_description()
