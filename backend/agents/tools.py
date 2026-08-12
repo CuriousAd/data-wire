@@ -12,6 +12,8 @@ import structlog
 import hashlib
 from database.redis import get_redis_client
 
+logger = structlog.get_logger(__name__)
+
 def get_sync_db_url() -> str:
     url = os.getenv("DATABASE_URL") or "postgresql://postgres:postgres@localhost:5432/datawire"
     url = url.replace("+asyncpg", "")

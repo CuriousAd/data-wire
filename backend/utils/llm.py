@@ -1,58 +1,59 @@
 import os
-import random
-from langchain_openrouter import ChatOpenRouter
+import itertools
+import threading
+from langchain_google_genai import ChatGoogleGenerativeAI
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# 4 API keys for OpenRouter load balancing
-OR_KEYS = [
-    os.getenv("OPENROUTER_API_KEY_1"),
-    os.getenv("OPENROUTER_API_KEY_2"),
-    os.getenv("OPENROUTER_API_KEY_3"),
-    os.getenv("OPENROUTER_API_KEY_4"),
+# ---------------------------------------------------------------------------
+# Gemini API Key Pool — Round-robin rotation for rate limit distribution
+# Free tier: 15 RPM per key → 5 keys = ~75 RPM effective throughput
+# ---------------------------------------------------------------------------
+GEMINI_KEYS = [
+    os.getenv("GEMINI_API_KEY_1"),
+    os.getenv("GEMINI_API_KEY_2"),
+    os.getenv("GEMINI_API_KEY_3"),
+    os.getenv("GEMINI_API_KEY_4"),
+    os.getenv("GEMINI_API_KEY_5"),
 ]
-# Filter out any None values in case some keys are missing
-OR_KEYS = [k for k in OR_KEYS if k]
+GEMINI_KEYS = [k for k in GEMINI_KEYS if k]
 
-MODEL_NAME = "openai/gpt-oss-120b"
+# Thread-safe round-robin key iterator
+_key_cycle = itertools.cycle(GEMINI_KEYS) if GEMINI_KEYS else None
+_key_lock = threading.Lock()
 
-def get_random_key():
-    return random.choice(OR_KEYS) if OR_KEYS else None
+MODEL_NAME = "gemini-2.5-flash"
 
-def _make_llm(temperature: float = 0.1):
-    # Use a random key for load balancing to prevent rate limits
-    api_key = get_random_key()
-    
-    # We can create fallbacks with other keys if needed, but since it's the same model, 
-    # it'll be faster to retry using the agent's logic or a simple fallback chain.
-    fallbacks = []
-    if len(OR_KEYS) > 1:
-        # Create a fallback with another key
-        other_keys = [k for k in OR_KEYS if k != api_key]
-        fallback_llm = ChatOpenRouter(
-            model=MODEL_NAME,
-            temperature=temperature,
-            api_key=random.choice(other_keys),
-            max_retries=2
-        )
-        fallbacks.append(fallback_llm)
+def _next_key() -> str:
+    """Returns the next API key from the round-robin pool (thread-safe)."""
+    if _key_cycle is None:
+        raise RuntimeError("No GEMINI_API_KEY_* environment variables configured.")
+    with _key_lock:
+        return next(_key_cycle)
 
-    main_llm = ChatOpenRouter(
+def _make_llm(temperature: float = 0.3):
+    """Creates a ChatGoogleGenerativeAI instance with Gemini 2.5 Flash.
+
+    Each call rotates to the next API key in the pool to distribute
+    rate limit consumption across all available keys.
+    """
+    return ChatGoogleGenerativeAI(
         model=MODEL_NAME,
         temperature=temperature,
-        api_key=api_key,
-        max_retries=2
+        max_retries=3,
+        google_api_key=_next_key(),
     )
-    
-    if fallbacks:
-        return main_llm.with_fallbacks(fallbacks)
-    return main_llm
 
-# Brain (120B) — used for routing + synthesis
+# ---------------------------------------------------------------------------
+# Exported LLM instances — consumed by brain.py and workflow.py
+# ---------------------------------------------------------------------------
+
+# Brain (lower temp for deterministic routing + synthesis)
 brain_llm = _make_llm(temperature=0.1)
 
-# Agents (120B)
+# Agents (slightly higher temp for creative reasoning)
 analyst_llm  = _make_llm(temperature=0.4)
 investor_llm = _make_llm(temperature=0.4)
 geopol_llm   = _make_llm(temperature=0.4)
+

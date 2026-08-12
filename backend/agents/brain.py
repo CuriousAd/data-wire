@@ -30,7 +30,7 @@ class RouteOutput(BaseModel):
     reraise=True
 )
 def _invoke_router_with_retry(prompt: str) -> dict:
-    structured_llm = brain_llm.with_structured_output(RouteOutput, include_raw=True)
+    structured_llm = brain_llm.with_structured_output(RouteOutput, method="json_schema", include_raw=True)
     res = structured_llm.invoke(prompt)
     
     parsed = res.get("parsed") if isinstance(res, dict) else res
@@ -79,7 +79,7 @@ class SynthesizerOutput(BaseModel):
     reraise=True
 )
 def _invoke_synthesizer_with_retry(prompt: str) -> dict:
-    structured_llm = brain_llm.with_structured_output(SynthesizerOutput, include_raw=True)
+    structured_llm = brain_llm.with_structured_output(SynthesizerOutput, method="json_schema", include_raw=True)
     res = structured_llm.invoke(prompt)
     
     parsed = res.get("parsed") if isinstance(res, dict) else res
@@ -91,7 +91,7 @@ def _invoke_synthesizer_with_retry(prompt: str) -> dict:
     return parsed.model_dump()
 
 def synthesize_findings_logic(user_query: str, findings: List[dict]) -> dict:
-    findings_str = json.dumps(findings, indent=2)
+    findings_str = json.dumps(findings, indent=2, default=str)
     
     synth_prompt = f"""You are the Master Synthesizer.
     

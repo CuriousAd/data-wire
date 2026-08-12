@@ -26,32 +26,51 @@ def distribute_agents(state: DataWireState):
     return state["active_agents"]
 
 def create_agent_node(persona_name: str, base_persona: str, tools: list, llm):
-    """A factory that dynamically constructs a LangChain react agent node for a given persona."""
+    """A factory that dynamically constructs a LangChain react agent node for a given persona.
+    
+    Agent execution is wrapped in fault isolation — if an individual agent crashes
+    (LLM timeout, tool error, rate limit), it returns a degraded finding instead of
+    crashing the entire multi-agent graph. This ensures the synthesizer can still
+    produce a report from remaining healthy agents.
+    """
     def node(state: DataWireState):
         logger.info("workflow.agent.started", agent=persona_name)
         
-        prompt = build_agent_prompt(
-            persona_name, base_persona, state["data_schema"], state["data_sample"], state["dataset_id"],
-            profile_json=state.get("data_profile")
-        )
+        try:
+            prompt = build_agent_prompt(
+                persona_name, base_persona, state["data_schema"], state["data_sample"], state["dataset_id"],
+                profile_json=state.get("data_profile")
+            )
+            
+            # We leverage create_react_agent for robust tool-calling and retry loops
+            agent = create_react_agent(llm, tools=tools, prompt=prompt)
+            
+            result = agent.invoke({"messages": [HumanMessage(content=state["user_query"])]})
+            final_msg = result["messages"][-1].content
+            
+            # Format the output to our generic AgentFinding dictionary
+            finding = AgentFinding(
+                agent_name=persona_name.lower().replace(" ", "_"),
+                finding=final_msg,
+                confidence=1.0, 
+                evidence="", 
+                news_context=None, 
+                suggested_viz=None, 
+                challenges=[]
+            )
+            logger.info("workflow.agent.completed", agent=persona_name)
+        except Exception as e:
+            logger.warning("workflow.agent.failed", agent=persona_name, error=str(e)[:200])
+            finding = AgentFinding(
+                agent_name=persona_name.lower().replace(" ", "_"),
+                finding=f"Note: The {persona_name} agent encountered a temporary service issue and could not complete its analysis. The report will continue with findings from other available agents.",
+                confidence=0.0,
+                evidence="",
+                news_context=None,
+                suggested_viz=None,
+                challenges=[str(e)[:200]]
+            )
         
-        # We leverage create_react_agent for robust tool-calling and retry loops
-        agent = create_react_agent(llm, tools=tools, prompt=prompt)
-        
-        result = agent.invoke({"messages": [HumanMessage(content=state["user_query"])]})
-        final_msg = result["messages"][-1].content
-        
-        # Format the output to our generic AgentFinding dictionary
-        finding = AgentFinding(
-            agent_name=persona_name.lower().replace(" ", "_"),
-            finding=final_msg,
-            confidence=1.0, 
-            evidence="", 
-            news_context=None, 
-            suggested_viz=None, 
-            challenges=[]
-        )
-        logger.info("workflow.agent.completed", agent=persona_name)
         return {"agent_findings": [finding]}
         
     return node
