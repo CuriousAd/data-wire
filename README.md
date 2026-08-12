@@ -22,35 +22,51 @@ Data-Wire is a full-stack, multi-agent AI data analytics platform. Upload any CS
 - **External Context:** The Geopolitical agent retrieves real-time news via the NewsData API to correlate data patterns with world events.
 - **Redis Caching:** SQL query results and full workflow outputs are cached to minimize redundant API calls.
 
-## Architecture
+## Architecture & System Design Decisions
 
 ![Architecture Design](docs/architecture.jpeg)
 
 ```
-┌─────────────────┐     SSE Stream      ┌──────────────────────────────────────┐
-│   React/Vite    │◄───────────────────►│          FastAPI Backend             │
-│   Frontend      │     POST /api/chat   │                                      │
-│                 │     POST /api/upload  │  ┌─────────┐   ┌───────────────┐    │
-│  ┌───────────┐  │                      │  │ Brain    │──►│ Agent Nodes   │    │
-│  │LeftPanel  │  │                      │  │ Router   │   │ (LangGraph)   │    │
-│  │CenterPanel│  │                      │  └─────────┘   └───────┬───────┘    │
-│  │RightPanel │  │                      │                        │            │
-│  └───────────┘  │                      │  ┌─────────────────────▼──────────┐ │
-│                 │                      │  │       Master Synthesizer       │ │
-└─────────────────┘                      │  └────────────────────────────────┘ │
-                                         └──────────┬──────────┬──────────────┘
-                                                    │          │
-                                         ┌──────────▼──┐  ┌───▼───────────┐
-                                         │  Supabase   │  │ Upstash Redis │
-                                         │  Postgres   │  │   (Cache)     │
-                                         └─────────────┘  └───────────────┘
+┌─────────────────┐     SSE Stream      ┌──────────────────────────────────────────┐
+│   React/Vite    │◄───────────────────►│             FastAPI Backend              │
+│   Frontend      │     POST /api/chat   │                                          │
+│                 │     POST /api/upload │  ┌─────────┐   ┌──────────────────────┐  │
+│  ┌───────────┐  │                      │  │ Brain   │──►│ Agent Nodes          │  │
+│  │LeftPanel  │  │                      │  │ Router  │   │ (LangGraph Resilience│  │
+│  │CenterPanel│  │                      │  └─────────┘   └──────────┬───────────┘  │
+│  │RightPanel │  │                      │                           │              │
+│  └───────────┘  │                      │  ┌────────────────────────▼────────────┐ │
+│                 │                      │  │  Synthesizer (Gemini 2.5 Flash)     │ │
+│                 │                      │  └─────────────────────────────────────┘ │
+└─────────────────┘                      └──────────┬───────────┬───────────────────┘
+                                                    │           │
+                                         ┌──────────▼──┐   ┌────▼───────────┐
+                                         │  Supabase   │   │ Upstash Redis  │
+                                         │  Postgres   │   │ (TLS Caching)  │
+                                         └─────────────┘   └────────────────┘
 ```
 
-### AI Pipeline Flow
-1. **Brain Router** classifies the query and selects which agents to activate.
-2. **Agent Nodes** (Analyst, Investor, Geo-Politics) run in parallel via LangGraph, each with specialized tools (SQL queries, statistics, forecasting, trend analysis, news search).
-3. **Master Synthesizer** aggregates all agent findings into a cohesive markdown report with a structured visualization config.
-4. Results are streamed to the frontend via SSE events.
+### Key Architectural & Design Decisions
+
+#### 1. Native Gemini 2.5 Flash & 5-Key Round-Robin Rotation
+* **LLM Engine Migration**: Replaced third-party LLM abstractions with native Google Gemini 2.5 Flash (`langchain-google-genai`).
+* **5-Key Round-Robin Rotation**: Implemented a thread-safe round-robin key pool (`itertools.cycle` + `threading.Lock`) across 5 Gemini API keys, multiplying free-tier API rate limits up to **75 RPM**.
+* **Strict JSON Schema Structured Output**: Eliminated unstable fallback chains in favor of Gemini's native `method="json_schema"` for zero-schema-drift structured output.
+* **Prefill & Prompt Caching Optimization**: Structured system prompts with a "Stable First, Dynamic Last" layout, enabling Gemini's implicit context caching to bypass prefill computation on repeated queries.
+
+#### 2. Agent-Level Fault Isolation & Degraded Modes
+* **Resilient Multi-Agent Graph**: Wrapped individual agent execution in try/except boundaries inside `agents/workflow.py`.
+* **Partial Pipeline Recovery**: If a specific agent hits a tool exception, timeout, or external API limit, it safely returns a degraded finding (`confidence=0.0`). The Master Synthesizer aggregates remaining healthy agent insights instead of failing the entire request.
+
+#### 3. High-Performance CSV Ingestion (DuckDB + Postgres COPY)
+* **Sub-Second Profiling**: Uses DuckDB in-memory engine to profile and clean uploaded CSVs in milliseconds.
+* **Bulk PostgreSQL Ingestion**: Uses raw `psycopg2` `COPY STDIN` streams to bulk-insert clean rows into dynamically created PostgreSQL tables (`dataset_<uuid>`).
+
+#### 4. Infrastructure & Memory Hardening (Render 512MB RAM)
+* **Lazy Loading**: Deferred heavy data science imports (`ydata-profiling`) inside function execution scope, reducing server boot-time RAM usage by **~200MB** and speeding up startup by 4×.
+* **Single-Worker Concurrency**: Configured Uvicorn `--workers 1` in `render.yaml` to prevent RAM multiplication across multi-process workers on free hosting.
+* **Self-Healing Startup Cleanup**: Added an automated lifespan startup routine in `main.py` that checks for datasets stuck in `"processing"` for >10 minutes (caused by server restarts) and auto-resets them to `"error"`.
+* **Graceful Redis Fallback**: Upstash Redis queries are executed over TLS (`rediss://`). If Redis is unreachable, the system logs the failure and gracefully bypasses caching without interrupting agent execution.
 
 ### Agent Specializations
 | Agent | Role | Tools |
@@ -62,8 +78,9 @@ Data-Wire is a full-stack, multi-agent AI data analytics platform. Upload any CS
 ## Tech Stack
 - **Frontend:** React 19, Vite, Tailwind CSS, Recharts, React-Markdown, react-simple-maps.
 - **Backend:** FastAPI, Python 3.11+, Uvicorn, SSE-Starlette, structlog.
-- **AI / Data:** LangGraph, LangChain, OpenRouter (`gpt-oss-120b`), DuckDB, Pandas, ydata-profiling, SciPy.
-- **Database / Cache:** Supabase (PostgreSQL via asyncpg), Upstash Redis (TLS).
+- **AI Engine:** Google Gemini 2.5 Flash (`langchain-google-genai`), LangGraph, LangChain.
+- **Data Ingestion & Analytics:** DuckDB, Pandas, ydata-profiling, SciPy, psycopg2.
+- **Database & Cache:** Supabase (PostgreSQL via asyncpg/psycopg2), Upstash Redis (TLS).
 - **External Services:** NewsData.io API.
 - **Deployment:** Render (Backend), Vercel (Frontend).
 
