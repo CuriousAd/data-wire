@@ -86,8 +86,10 @@ def bulk_insert_to_postgres(database_url: str, file_path: str, dataset_id: str, 
     """
     logger.info("bulk_insert.start", dataset_id=dataset_id)
     
-    # Need to convert postgresql+asyncpg URL to standard postgres for psycopg2
+    # Need to convert postgresql+asyncpg URL to standard postgresql for psycopg2
     sync_url = database_url.replace("+asyncpg", "")
+    if sync_url.startswith("postgres://"):
+        sync_url = sync_url.replace("postgres://", "postgresql://", 1)
     
     table_name = f"dataset_{dataset_id.replace('-', '_')}"
     
