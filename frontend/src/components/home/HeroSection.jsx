@@ -2,7 +2,7 @@ import { InputCard } from './InputCard';
 
 export function HeroSection() {
   return (
-    <div className="pt-12 space-y-7">
+    <div className="pt-12 space-y-5 flex-1 flex flex-col">
       {/* Top pills */}
       <div className="flex items-center gap-3 flex-wrap">
         <span className="px-4 py-1.5 rounded-full text-[11px] font-semibold tracking-[0.14em] uppercase border border-[#1a3c2e] text-[#1a3c2e] bg-[#dfeee6]">
@@ -18,7 +18,7 @@ export function HeroSection() {
 
       {/* Main Heading */}
       <h1 className="font-serif text-[3.8rem] font-bold leading-[1.06] tracking-[-0.015em] text-[#1a1a1a] max-w-[540px]">
-        Converse With Data Like Never Before.
+        Converse with Data like Never before.
       </h1>
 
       {/* Subtitle */}
@@ -35,8 +35,10 @@ export function HeroSection() {
         </p>
       </div>
 
-      {/* Input Card */}
-      <InputCard />
+      {/* Input Card — pushed to bottom */}
+      <div className="mt-auto pt-2">
+        <InputCard />
+      </div>
     </div>
   );
 }

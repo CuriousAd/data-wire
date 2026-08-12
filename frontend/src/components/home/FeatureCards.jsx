@@ -8,10 +8,7 @@ const STEPS = [
 
 export function FeatureCards() {
   return (
-    <div className="bg-white/75 rounded-[20px] p-5 border border-[#e0dbd5]">
-      <p className="text-[9px] font-semibold tracking-[0.18em] uppercase text-[#a8a29e] mb-4">
-        How It Works
-      </p>
+    <div className="bg-white rounded-[22px] p-6 shadow-[0_2px_24px_rgba(0,0,0,0.05)] border border-[#e8e3dd]">
       <div className="flex items-center justify-between gap-2">
         {STEPS.map((step, i) => (
           <div key={i} className="flex items-center gap-2 flex-1 min-w-0">

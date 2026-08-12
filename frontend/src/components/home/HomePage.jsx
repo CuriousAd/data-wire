@@ -30,16 +30,18 @@ export function HomePage() {
         <Navbar />
 
         <main className="max-w-[1320px] mx-auto px-10 pt-8 pb-20">
-          <div className="flex gap-10 items-start">
+          <div className="flex gap-5 items-stretch">
             {/* Left column ≈58% */}
-            <div className="flex-[3] min-w-0">
+            <div className="flex-[3] min-w-0 flex flex-col">
               <HeroSection />
             </div>
 
             {/* Right column ≈42% */}
-            <div className="flex-[2.2] space-y-5 pt-8">
+            <div className="flex-[2.2] flex flex-col gap-5 pt-12">
               <PreviewPanel />
-              <FeatureCards />
+              <div className="mt-auto">
+                <FeatureCards />
+              </div>
             </div>
           </div>
         </main>

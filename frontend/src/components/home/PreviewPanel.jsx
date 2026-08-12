@@ -3,15 +3,15 @@ import { Settings } from 'lucide-react';
 const SAMPLES = [
   {
     label: 'Sample 1',
-    text: 'If a product raises its price next quarter, how will customer sentiment and narrative spread evolve?',
+    text: 'Analyze quarterly sales trends and pinpoint top-performing product categories.',
   },
   {
     label: 'Sample 2',
-    text: 'If a brand suddenly changes its spokesperson, how might public opinion move?',
+    text: 'Forecast product price movements and key revenue drivers for the coming year.',
   },
   {
     label: 'Sample 3',
-    text: 'If a policy enters public debate, which groups are likely to support or oppose it first?',
+    text: 'Detect churn drivers and highlight high-risk account segments.',
   },
 ];
 
