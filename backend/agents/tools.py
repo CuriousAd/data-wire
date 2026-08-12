@@ -12,11 +12,15 @@ import structlog
 import hashlib
 from database.redis import get_redis_client
 
-logger = structlog.get_logger(__name__)
-DATABASE_URL = os.getenv("DATABASE_URL").replace("+asyncpg", "") # Get sync URL for pandas
+def get_sync_db_url() -> str:
+    url = os.getenv("DATABASE_URL") or "postgresql://postgres:postgres@localhost:5432/datawire"
+    url = url.replace("+asyncpg", "")
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql://", 1)
+    return url
 
 def get_sync_conn():
-    return psycopg2.connect(DATABASE_URL)
+    return psycopg2.connect(get_sync_db_url())
 
 @tool
 def query_database(sql: str, dataset_id: str) -> str:

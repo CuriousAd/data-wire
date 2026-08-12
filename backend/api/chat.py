@@ -131,8 +131,18 @@ async def chat_endpoint(request: Request, body: ChatRequest, db: AsyncSession = 
                         }
                         
                         viz_config = state_update.get("final_viz")
-                        # Handle potential Pydantic model vs dict
-                        viz_json = viz_config if isinstance(viz_config, dict) else (viz_config.model_dump() if viz_config else None)
+                        try:
+                            if viz_config is None:
+                                viz_json = None
+                            elif isinstance(viz_config, dict):
+                                viz_json = viz_config
+                            elif hasattr(viz_config, "model_dump"):
+                                viz_json = viz_config.model_dump()
+                            else:
+                                viz_json = None
+                        except Exception as viz_err:
+                            logger.warning("chat.viz_serialization_failed", error=str(viz_err))
+                            viz_json = None
                         
                         out_data = {
                             "text": state_update.get("final_text"),

@@ -2,6 +2,7 @@ from typing import List, Literal, Optional
 from pydantic import BaseModel, Field
 import structlog
 import json
+from tenacity import retry, stop_after_attempt, retry_if_exception_type, wait_exponential
 
 from utils.llm import brain_llm
 from agents.viz_schema import VizConfig
@@ -22,6 +23,23 @@ class RouteOutput(BaseModel):
         description="List of agents to fire. Valid names: 'analyst_agent', 'investor_agent', 'geo_politics_agent'"
     )
 
+@retry(
+    stop=stop_after_attempt(2),
+    wait=wait_exponential(multiplier=1, min=1, max=3),
+    retry=retry_if_exception_type(ValueError),
+    reraise=True
+)
+def _invoke_router_with_retry(prompt: str) -> dict:
+    structured_llm = brain_llm.with_structured_output(RouteOutput, include_raw=True)
+    res = structured_llm.invoke(prompt)
+    
+    parsed = res.get("parsed") if isinstance(res, dict) else res
+    if parsed is None:
+        raw_val = res.get("raw") if isinstance(res, dict) else None
+        raise ValueError(f"Router structured LLM returned None. Raw response: {str(raw_val)[:200]}")
+    
+    return parsed.model_dump()
+
 def route_query_logic(user_query: str) -> dict:
     routing_prompt = f"""You are the router for a multi-agent AI pipeline.
     
@@ -34,10 +52,8 @@ Determine the active agents needed:
 
 DO NOT OVER-ROUTE. Simple queries MUST strictly use only the analyst_agent to save resources.
 """
-    structured_llm = brain_llm.with_structured_output(RouteOutput)
     try:
-        result = structured_llm.invoke(routing_prompt)
-        return result.model_dump()
+        return _invoke_router_with_retry(routing_prompt)
     except Exception as e:
         logger.error("brain.router.failed", error=str(e))
         return {
@@ -56,6 +72,24 @@ class SynthesizerOutput(BaseModel):
         description="Overall geopolitical or financial risk severity determined from the findings."
     )
 
+@retry(
+    stop=stop_after_attempt(2),
+    wait=wait_exponential(multiplier=1, min=1, max=3),
+    retry=retry_if_exception_type(ValueError),
+    reraise=True
+)
+def _invoke_synthesizer_with_retry(prompt: str) -> dict:
+    structured_llm = brain_llm.with_structured_output(SynthesizerOutput, include_raw=True)
+    res = structured_llm.invoke(prompt)
+    
+    parsed = res.get("parsed") if isinstance(res, dict) else res
+    if parsed is None:
+        raw_val = res.get("raw") if isinstance(res, dict) else None
+        parsing_err = res.get("parsing_error") if isinstance(res, dict) else None
+        raise ValueError(f"Synthesizer structured LLM returned None. Error: {parsing_err}. Raw: {str(raw_val)[:200]}")
+    
+    return parsed.model_dump()
+
 def synthesize_findings_logic(user_query: str, findings: List[dict]) -> dict:
     findings_str = json.dumps(findings, indent=2)
     
@@ -71,15 +105,21 @@ Agent Findings: {findings_str}
 3. Assign an overall severity (CRITICAL, HIGH, MEDIUM, LOW).
 """
     
-    structured_llm = brain_llm.with_structured_output(SynthesizerOutput)
     try:
-        result = structured_llm.invoke(synth_prompt)
-        return result.model_dump()
+        return _invoke_synthesizer_with_retry(synth_prompt)
     except Exception as e:
         logger.error("brain.synthesizer.failed", error=str(e))
-        # Fallback to prevent complete failure if LLM hallucinates JSON
+        # Fallback to prevent complete failure if LLM fails after retries
         return {
-            "markdown_report": f"**Analysis Error:** Failed to synthesize the final report due to model format constraints.\n\nRaw exception: {str(e)}",
-            "viz_config": None, # Frontend will handle this gracefully
+            "markdown_report": f"### Analysis Summary\n\nThe AI analysis completed, but report formatting encountered an issue.\n\n**Details:** {str(e)}",
+            "viz_config": {
+                "viz_type": "table",
+                "title": "Analysis Summary",
+                "data": [],
+                "color_scheme": "default",
+                "show_legend": False,
+                "stacked": False
+            },
             "severity": "LOW"
         }
+
