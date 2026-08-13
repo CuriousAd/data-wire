@@ -10,7 +10,7 @@ from services.data_processing import process_csv, bulk_insert_to_postgres, proce
 logger = structlog.get_logger(__name__)
 router = APIRouter()
 
-MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
+MAX_FILE_SIZE = 2 * 1024 * 1024  # 2MB — Render free-tier RAM cap
 
 @router.post("/api/upload")
 async def upload_csv(
@@ -27,7 +27,7 @@ async def upload_csv(
     file.file.seek(0)
     
     if file_size > MAX_FILE_SIZE:
-        raise HTTPException(status_code=413, detail={"message": "The uploaded CSV exceeds the 100MB capacity limit. Please compress or trim your dataset.", "code": "FILE_TOO_LARGE"})
+        raise HTTPException(status_code=413, detail={"message": "The uploaded CSV exceeds the 2 MB limit. Please trim or sample your dataset before uploading.", "code": "FILE_TOO_LARGE"})
         
     dataset = Dataset(original_filename=file.filename, filename=file.filename, status="processing")
     db.add(dataset)
