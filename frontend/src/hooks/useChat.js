@@ -29,8 +29,10 @@ export function useChat() {
       onResult: (p) => {
         // Text → right panel (messages)
         updateLastMessage({ content: p.text || '', newsSeverity: p.news_severity || 'LOW', isStreaming: false });
-        // Viz → center panel
-        if (p.viz) addCenterItem({ type: 'viz', content: p.viz, title: p.viz.title || 'Visualization' });
+        // Viz → center panel (only if the response contains a real visualization)
+        const viz = p.viz;
+        const hasValidViz = viz && viz.viz_type && viz.viz_type !== 'none' && Array.isArray(viz.data) && viz.data.length > 0;
+        if (hasValidViz) addCenterItem({ type: 'viz', content: viz, title: viz.title || 'Visualization' });
       },
       onError: (e) => {
         const msg = e.message || 'Something went wrong.';
