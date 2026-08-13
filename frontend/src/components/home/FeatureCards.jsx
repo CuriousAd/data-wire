@@ -1,4 +1,4 @@
-import { Upload, Brain, BarChart3, ChevronRight } from 'lucide-react';
+import { Upload, Brain, BarChart3, ChevronRight, ChevronDown } from 'lucide-react';
 
 const STEPS = [
   { icon: Upload, label: 'Upload CSV', accent: '#1a3c2e' },
@@ -8,10 +8,10 @@ const STEPS = [
 
 export function FeatureCards() {
   return (
-    <div className="bg-white rounded-[22px] p-6 shadow-[0_2px_24px_rgba(0,0,0,0.05)] border border-[#e8e3dd]">
-      <div className="flex items-center justify-between gap-2">
+    <div className="bg-white rounded-[18px] sm:rounded-[22px] p-5 sm:p-6 shadow-[0_2px_24px_rgba(0,0,0,0.05)] border border-[#e8e3dd]">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-2">
         {STEPS.map((step, i) => (
-          <div key={i} className="flex items-center gap-2 flex-1 min-w-0">
+          <div key={i} className="flex items-center gap-2 flex-1 min-w-0 w-full sm:w-auto">
             <div
               className="flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0"
               style={{ backgroundColor: step.accent + '12' }}
@@ -22,7 +22,11 @@ export function FeatureCards() {
               {step.label}
             </span>
             {i < STEPS.length - 1 && (
-              <ChevronRight size={14} className="text-[#c5c0ba] flex-shrink-0 ml-auto" />
+              <>
+                {/* Horizontal chevron on sm+, vertical on mobile */}
+                <ChevronRight size={14} className="text-[#c5c0ba] flex-shrink-0 ml-auto hidden sm:block" />
+                <ChevronDown size={14} className="text-[#c5c0ba] flex-shrink-0 ml-auto sm:hidden" />
+              </>
             )}
           </div>
         ))}

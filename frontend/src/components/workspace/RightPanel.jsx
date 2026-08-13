@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { Bot, User, Clock, Copy, Check, AlertTriangle, Send, Square, Loader2, MessageSquare } from 'lucide-react';
+import { Bot, Clock, Copy, Check, AlertTriangle, Send, Square, Loader2, MessageSquare } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useAppStore } from '../../store/appStore';
@@ -26,7 +26,7 @@ function TimeStamp({ iso }) {
 function UserMsg({ msg }) {
   return (
     <div className="flex justify-end gap-2">
-      <div className="max-w-[88%]">
+      <div className="max-w-[88%] sm:max-w-[88%]">
         <div className="bg-[#1a3c2e] text-white rounded-2xl rounded-tr-sm px-3.5 py-2.5">
           <p className="text-[12.5px] leading-relaxed">{msg.content}</p>
         </div>
@@ -104,7 +104,7 @@ function AIMsg({ msg }) {
 
 function StreamingDots({ status }) {
   if (!status) return null;
-  const labels = { routing: 'Routing to specialists…', agent_finding: `Analyzing…`, synthesizing: 'Synthesizing insights…' };
+  const labels = { routing: 'Routing to specialists…', agent_finding: 'Analyzing…', synthesizing: 'Synthesizing insights…' };
   return (
     <div className="flex gap-2">
       <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 bg-[#dfeee6] border border-[#1a3c2e]/10">
@@ -117,7 +117,7 @@ function StreamingDots({ status }) {
   );
 }
 
-export function RightPanel() {
+export function RightPanel({ isMobileFullWidth = false }) {
   const { messages, activeDataset } = useAppStore();
   const { isStreaming, streamingStatus, sendMessage, cancelStream } = useChat();
   const bottomRef = useRef(null);
@@ -140,16 +140,16 @@ export function RightPanel() {
   const canSend = query.trim().length > 0 && !isStreaming && ready;
 
   return (
-    <div className="h-full flex flex-col bg-[#f0ebe4] border-l border-[#e5e0da]">
+    <div className={`h-full flex flex-col bg-[#f0ebe4] ${isMobileFullWidth ? '' : 'border-l border-[#e5e0da]'}`}>
       {/* Header */}
       <div className="px-4 py-2.5 border-b border-[#e5e0da] flex items-center gap-2 flex-shrink-0">
         <MessageSquare size={13} className="text-[#1a3c2e]" />
         <span className="text-[11px] font-semibold text-[#1a1a1a]">Chat</span>
-        {activeDataset && <span className="text-[10px] text-[#a8a29e] ml-auto truncate max-w-[120px]">{activeDataset.filename}</span>}
+        {activeDataset && <span className="text-[10px] text-[#a8a29e] ml-auto truncate max-w-[120px] sm:max-w-[160px]">{activeDataset.filename}</span>}
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3 min-h-0">
+      <div className="flex-1 overflow-y-auto touch-scroll px-3 py-3 space-y-3 min-h-0">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center px-4">
             {ready
@@ -164,26 +164,27 @@ export function RightPanel() {
       </div>
 
       {/* Input */}
-      <div className="px-3 pb-3 pt-1.5 flex-shrink-0">
+      <div className="px-3 pb-3 pt-1.5 flex-shrink-0" style={{ paddingBottom: isMobileFullWidth ? 'max(12px, env(safe-area-inset-bottom, 12px))' : undefined }}>
         <div className="flex items-end gap-2 bg-white rounded-xl p-2 border border-[#e5e0da] shadow-[0_1px_4px_rgba(0,0,0,0.03)]">
           <textarea
             ref={taRef} value={query} onChange={onChange} onKeyDown={onKey}
             placeholder={ready ? 'Ask about your data…' : 'Waiting for dataset…'}
             disabled={!ready || isStreaming} rows={1}
-            className="flex-1 resize-none outline-none text-[12px] text-[#1a1a1a] placeholder-[#b5b0aa] bg-transparent disabled:opacity-40"
+            className="flex-1 resize-none outline-none text-[13px] sm:text-[12px] text-[#1a1a1a] placeholder-[#b5b0aa] bg-transparent disabled:opacity-40"
             style={{ maxHeight: 120 }}
           />
           {isStreaming ? (
-            <button onClick={cancelStream} className="w-7 h-7 rounded-lg flex items-center justify-center bg-red-50 border border-red-200 text-red-400 hover:bg-red-100 transition-colors flex-shrink-0">
+            <button onClick={cancelStream} className="w-9 h-9 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center bg-red-50 border border-red-200 text-red-400 hover:bg-red-100 transition-colors flex-shrink-0">
               <Square size={11} />
             </button>
           ) : (
-            <button onClick={send} disabled={!canSend} className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all ${canSend ? 'bg-[#1a3c2e] text-white hover:bg-[#142e23]' : 'bg-[#ece8e2] text-[#b5b0aa] cursor-not-allowed'}`}>
-              <Send size={11} />
+            <button onClick={send} disabled={!canSend} className={`w-9 h-9 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all ${canSend ? 'bg-[#1a3c2e] text-white hover:bg-[#142e23]' : 'bg-[#ece8e2] text-[#b5b0aa] cursor-not-allowed'}`}>
+              <Send size={12} />
             </button>
           )}
         </div>
-        <p className="text-center text-[9px] text-[#b5b0aa] mt-1">Enter to send · Shift+Enter for new line</p>
+        {/* Hide keyboard hint on touch devices — it's irrelevant */}
+        <p className="hidden sm:block text-center text-[9px] text-[#b5b0aa] mt-1">Enter to send · Shift+Enter for new line</p>
       </div>
     </div>
   );

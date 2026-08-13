@@ -20,7 +20,7 @@ function EmptyState() {
 function DatasetPreviewTable({ data }) {
   if (!data?.columns?.length) return null;
   return (
-    <div className="overflow-x-auto rounded-lg border border-[#e5e0da]">
+    <div className="overflow-x-auto touch-scroll rounded-lg border border-[#e5e0da]">
       <table className="w-full text-left text-[11px]">
         <thead>
           <tr className="bg-[#f5f2ed]">
@@ -54,9 +54,9 @@ export function CenterPanel() {
   if (centerItems.length === 0) return <div className="h-full bg-[#faf8f5]"><EmptyState /></div>;
 
   return (
-    <div ref={scrollRef} className="h-full overflow-y-auto bg-[#faf8f5] p-6 space-y-5">
+    <div ref={scrollRef} className="h-full overflow-y-auto touch-scroll bg-[#faf8f5] p-3 sm:p-4 lg:p-6 space-y-4 lg:space-y-5">
       {centerItems.map(item => (
-        <div key={item.id} className="bg-white rounded-xl border border-[#e5e0da] p-5 shadow-[0_1px_6px_rgba(0,0,0,0.03)]">
+        <div key={item.id} className="bg-white rounded-xl border border-[#e5e0da] p-3 sm:p-4 lg:p-5 shadow-[0_1px_6px_rgba(0,0,0,0.03)]">
           {item.type === 'viz' && <ChartRenderer vizConfig={item.content} />}
           {item.type === 'dataset' && (
             <>

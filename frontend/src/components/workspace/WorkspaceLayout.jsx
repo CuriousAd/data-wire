@@ -2,7 +2,9 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { LeftPanel } from './LeftPanel';
 import { CenterPanel } from './CenterPanel';
 import { RightPanel } from './RightPanel';
+import { MobileTabBar } from './MobileTabBar';
 import { useAppStore } from '../../store/appStore';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 
 const MIN_LEFT = 200, MAX_LEFT = 380;
 const MIN_RIGHT = 320, MAX_RIGHT = 520;
@@ -19,8 +21,10 @@ function ProgressBar({ datasets }) {
   );
 }
 
-export function WorkspaceLayout() {
-  const { datasets } = useAppStore();
+/* ───────────────────────────────────────────────
+   Desktop layout — original 3-column with dividers
+   ─────────────────────────────────────────────── */
+function DesktopLayout() {
   const [leftW, setLeftW] = useState(250);
   const [rightW, setRightW] = useState(400);
   const containerRef = useRef(null);
@@ -49,15 +53,63 @@ export function WorkspaceLayout() {
   const dividerCls = "w-[3px] cursor-col-resize hover:bg-[#1a3c2e]/15 active:bg-[#1a3c2e]/25 transition-colors flex-shrink-0 relative";
 
   return (
-    <div ref={containerRef} className="flex flex-col h-screen overflow-hidden bg-[#f0ebe4]">
-      <ProgressBar datasets={datasets} />
-      <div className="flex flex-1 min-h-0">
-        <div style={{ width: leftW, minWidth: leftW }} className="flex-shrink-0"><LeftPanel /></div>
-        <div className={dividerCls} onMouseDown={onDown('left')}><div className="absolute inset-y-0 -left-1.5 -right-1.5" /></div>
-        <div className="flex-1 min-w-0"><CenterPanel /></div>
-        <div className={dividerCls} onMouseDown={onDown('right')}><div className="absolute inset-y-0 -left-1.5 -right-1.5" /></div>
-        <div style={{ width: rightW, minWidth: rightW }} className="flex-shrink-0"><RightPanel /></div>
+    <div ref={containerRef} className="flex flex-1 min-h-0">
+      <div style={{ width: leftW, minWidth: leftW }} className="flex-shrink-0"><LeftPanel /></div>
+      <div className={dividerCls} onMouseDown={onDown('left')}><div className="absolute inset-y-0 -left-1.5 -right-1.5" /></div>
+      <div className="flex-1 min-w-0"><CenterPanel /></div>
+      <div className={dividerCls} onMouseDown={onDown('right')}><div className="absolute inset-y-0 -left-1.5 -right-1.5" /></div>
+      <div style={{ width: rightW, minWidth: rightW }} className="flex-shrink-0"><RightPanel /></div>
+    </div>
+  );
+}
+
+/* ───────────────────────────────────────────────
+   Mobile / Tablet layout — tabbed single-panel
+   ─────────────────────────────────────────────── */
+function TabbedLayout() {
+  const { messages } = useAppStore();
+  const [activeTab, setActiveTab] = useState('chat'); // default to Chat after upload
+  const [lastSeenCount, setLastSeenCount] = useState(0);
+
+  // Unread = not on chat tab AND new messages arrived since we last viewed chat
+  const chatUnread = activeTab !== 'chat' && messages.length > lastSeenCount;
+
+  // When switching tabs, snapshot the message count if entering chat
+  const handleTabChange = useCallback((tab) => {
+    if (tab === 'chat') setLastSeenCount(messages.length);
+    setActiveTab(tab);
+  }, [messages.length]);
+
+  return (
+    <>
+      {/* Active panel — full-width, grows to fill available space */}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        {activeTab === 'data' && <LeftPanel isMobileFullWidth />}
+        {activeTab === 'canvas' && <CenterPanel />}
+        {activeTab === 'chat' && <RightPanel isMobileFullWidth />}
       </div>
+
+      {/* Bottom tab bar */}
+      <MobileTabBar
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        chatUnread={chatUnread}
+      />
+    </>
+  );
+}
+
+/* ───────────────────────────────────────────────
+   Root workspace layout — switches between modes
+   ─────────────────────────────────────────────── */
+export function WorkspaceLayout() {
+  const { datasets } = useAppStore();
+  const { isDesktop } = useBreakpoint();
+
+  return (
+    <div className="flex flex-col h-screen overflow-hidden bg-[#f0ebe4]">
+      <ProgressBar datasets={datasets} />
+      {isDesktop ? <DesktopLayout /> : <TabbedLayout />}
     </div>
   );
 }

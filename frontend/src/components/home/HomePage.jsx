@@ -29,17 +29,17 @@ export function HomePage() {
       <div className="relative z-10">
         <Navbar />
 
-        <main className="max-w-[1320px] mx-auto px-10 pt-8 pb-20">
-          <div className="flex gap-5 items-stretch">
-            {/* Left column ≈58% */}
+        <main className="max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-10 pt-4 sm:pt-6 lg:pt-8 pb-12 sm:pb-16 lg:pb-20">
+          <div className="flex flex-col lg:flex-row gap-5 items-stretch">
+            {/* Left column ≈58% on desktop, full-width on mobile */}
             <div className="flex-[3] min-w-0 flex flex-col">
               <HeroSection />
             </div>
 
-            {/* Right column ≈42% */}
-            <div className="flex-[2.2] flex flex-col gap-5 pt-12">
+            {/* Right column ≈42% on desktop, full-width on mobile */}
+            <div className="flex-[2.2] flex flex-col gap-5 pt-0 lg:pt-12">
               <PreviewPanel />
-              <div className="mt-auto">
+              <div className="lg:mt-auto">
                 <FeatureCards />
               </div>
             </div>

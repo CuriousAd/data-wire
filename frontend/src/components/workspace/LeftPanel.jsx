@@ -15,7 +15,7 @@ const STATUS_CFG = {
 const POLL_INTERVAL = 2000;
 const MAX_POLL = 150;
 
-export function LeftPanel() {
+export function LeftPanel({ isMobileFullWidth = false }) {
   const { datasets, activeDatasetId, switchDataset, resetToHome, updateDataset } = useAppStore();
   const { isUploading, handleUpload } = useUpload();
   const inputRef = useRef(null);
@@ -72,7 +72,7 @@ export function LeftPanel() {
   }, [handleUpload]);
 
   return (
-    <div className="h-full flex flex-col bg-[#f5f2ed] border-r border-[#e5e0da]">
+    <div className={`h-full flex flex-col bg-[#f5f2ed] ${isMobileFullWidth ? '' : 'border-r border-[#e5e0da]'}`}>
       {/* Header */}
       <div className="px-4 pt-4 pb-3 border-b border-[#e5e0da]">
         <div className="flex items-center justify-between mb-3">
@@ -84,7 +84,9 @@ export function LeftPanel() {
         <button
           onClick={() => inputRef.current?.click()}
           disabled={isUploading}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#1a3c2e] text-white text-[12px] font-medium hover:bg-[#142e23] transition-colors disabled:opacity-50"
+          className={`w-full flex items-center justify-center gap-2 px-4 rounded-xl bg-[#1a3c2e] text-white text-[12px] font-medium hover:bg-[#142e23] transition-colors disabled:opacity-50 ${
+            isMobileFullWidth ? 'py-3' : 'py-2.5'
+          }`}
         >
           {isUploading ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
           {isUploading ? 'Uploading…' : 'Upload CSV'}
@@ -93,7 +95,7 @@ export function LeftPanel() {
       </div>
 
       {/* Dataset list */}
-      <div className="flex-1 overflow-y-auto px-3 py-3">
+      <div className="flex-1 overflow-y-auto touch-scroll px-3 py-3">
         <p className="text-[9px] font-semibold tracking-[0.18em] uppercase text-[#a8a29e] px-1 mb-2">Datasets</p>
         <div className="space-y-1">
           {datasets.length === 0 && (

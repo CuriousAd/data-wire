@@ -166,8 +166,8 @@ export function ChartRenderer({ vizConfig }) {
         <ChartHeader onExpand={() => setIsExpanded(true)} expanded={false} />
 
         <div
-          className="rounded-xl p-3 relative transition-all duration-200 hover:border-slate-300"
-          style={{ background: 'transparent', border: '1px solid transparent' }}
+          className="rounded-xl p-2 sm:p-3 relative transition-all duration-200 hover:border-slate-300"
+          style={{ background: 'transparent', border: '1px solid transparent', minHeight: 200 }}
           onClick={() => showTypePicker && setShowTypePicker(false)}
         >
           {/* Pass vizConfig as-is; each chart normalises its own keys internally */}
@@ -178,26 +178,26 @@ export function ChartRenderer({ vizConfig }) {
       {/* Expanded modal overlay */}
       {isExpanded && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-8 backdrop-blur-sm"
           style={{ background: 'rgba(5,9,18,0.85)', animation: 'fadeIn 0.2s ease' }}
           onClick={e => { if (e.target === e.currentTarget) setIsExpanded(false); }}
         >
           <div
-            className="w-full max-w-6xl h-[85vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden glass-strong border border-slate-700"
+            className="w-full h-full sm:max-w-6xl sm:h-[85vh] flex flex-col rounded-none sm:rounded-2xl shadow-2xl overflow-hidden glass-strong border-0 sm:border border-slate-700"
             role="dialog"
             aria-modal="true"
             style={{ animation: 'slideUp 0.25s cubic-bezier(0.16,1,0.3,1)' }}
           >
             {/* Modal header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800/60 bg-slate-900/50">
-              <div className="flex items-center gap-3 flex-1 min-w-0 mr-4">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-cyan-500/10 border border-cyan-500/20 flex-shrink-0">
+            <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-800/60 bg-slate-900/50">
+              <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 mr-2 sm:mr-4">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center bg-cyan-500/10 border border-cyan-500/20 flex-shrink-0">
                   <BarChart2 size={16} className="text-cyan-400" />
                 </div>
-                <h2 className="text-lg font-bold text-slate-200 truncate">{vizConfig.title}</h2>
+                <h2 className="text-base sm:text-lg font-bold text-slate-200 truncate">{vizConfig.title}</h2>
               </div>
 
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                 <ChartHeader onExpand={() => {}} expanded={true} />
                 <button
                   onClick={() => setIsExpanded(false)}
@@ -210,8 +210,8 @@ export function ChartRenderer({ vizConfig }) {
             </div>
 
             {/* Modal body — ResponsiveContainer needs an explicit height, not 100% in a flex child */}
-            <div className="flex-1 p-6 sm:p-8 bg-slate-900/40" style={{ minHeight: 0 }}>
-              <div style={{ width: '100%', height: '100%', minHeight: 400 }}>
+            <div className="flex-1 p-3 sm:p-8 bg-slate-900/40" style={{ minHeight: 0 }}>
+              <div style={{ width: '100%', height: '100%', minHeight: 280 }}>
                 <Component vizConfig={vizConfig} activeType={activeType} isDark={true} />
               </div>
             </div>

@@ -35,7 +35,7 @@ export function InputCard() {
   const canStart = !!selectedFile && !isUploading;
 
   return (
-    <div className="bg-white rounded-[22px] p-7 pb-8 shadow-[0_2px_24px_rgba(0,0,0,0.05)] border border-[#e8e3dd] max-w-[520px] flex flex-col min-h-[248px]">
+    <div className="bg-white rounded-[18px] sm:rounded-[22px] p-4 sm:p-7 pb-5 sm:pb-8 shadow-[0_2px_24px_rgba(0,0,0,0.05)] border border-[#e8e3dd] w-full lg:max-w-[520px] flex flex-col min-h-0 sm:min-h-[248px]">
       <input
         ref={fileInputRef}
         type="file"
@@ -48,7 +48,7 @@ export function InputCard() {
 
       {/* Input field */}
       <div
-        className="bg-[#f5f2ed] rounded-[14px] px-4 py-3.5 mb-5 cursor-pointer hover:bg-[#f0ede7] transition-colors"
+        className="bg-[#f5f2ed] rounded-[12px] sm:rounded-[14px] px-4 py-3 sm:py-3.5 mb-4 sm:mb-5 cursor-pointer hover:bg-[#f0ede7] transition-colors"
         onClick={openFilePicker}
       >
         <p className="text-[13px] text-[#a8a29e] font-sans">
@@ -58,13 +58,13 @@ export function InputCard() {
 
       {/* Selected file indicator */}
       {selectedFile && (
-        <div className="flex items-center gap-2 mb-4 px-1">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#dfeee6] border border-[#1a3c2e]/20">
-            <Paperclip size={12} className="text-[#1a3c2e]" />
-            <span className="text-[12px] text-[#1a3c2e] font-medium truncate max-w-[200px]">
+        <div className="flex items-center gap-2 mb-3 sm:mb-4 px-1">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#dfeee6] border border-[#1a3c2e]/20 max-w-full overflow-hidden">
+            <Paperclip size={12} className="text-[#1a3c2e] flex-shrink-0" />
+            <span className="text-[12px] text-[#1a3c2e] font-medium truncate">
               {selectedFile.name}
             </span>
-            <span className="text-[11px] text-[#1a3c2e]/60">
+            <span className="text-[11px] text-[#1a3c2e]/60 flex-shrink-0">
               {formatSize(selectedFile.size)}
             </span>
           </div>
@@ -72,7 +72,7 @@ export function InputCard() {
       )}
 
       {/* Example */}
-      <p className="text-[12px] text-[#8a8580] mb-5 leading-relaxed">
+      <p className="text-[12px] text-[#8a8580] mb-4 sm:mb-5 leading-relaxed">
         Example: If a product raises its price next quarter, how will customer
         sentiment and narrative spread change?
       </p>
@@ -82,7 +82,7 @@ export function InputCard() {
         <button
           onClick={handleStartChat}
           disabled={!canStart}
-          className={`px-5 py-2 rounded-full text-[13px] font-medium transition-all flex items-center gap-1.5 ${canStart
+          className={`px-5 py-2.5 sm:py-2 rounded-full text-[13px] font-medium transition-all flex items-center gap-1.5 ${canStart
             ? 'bg-[#1a3c2e] text-white hover:bg-[#142e23] shadow-sm'
             : 'bg-[#c2c2c2] text-white cursor-not-allowed'
             }`}
