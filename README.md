@@ -27,18 +27,18 @@ Data-Wire is a full-stack, multi-agent AI data analytics platform. Upload any CS
 ![Architecture Design](docs/architecture.jpeg)
 
 ```
-┌─────────────────┐     SSE Stream      ┌──────────────────────────────────────────┐
-│   React/Vite    │◄───────────────────►│             FastAPI Backend              │
-│   Frontend      │     POST /api/chat   │                                          │
-│                 │     POST /api/upload │  ┌─────────┐   ┌──────────────────────┐  │
-│  ┌───────────┐  │                      │  │ Brain   │──►│ Agent Nodes          │  │
-│  │LeftPanel  │  │                      │  │ Router  │   │ (LangGraph Resilience│  │
-│  │CenterPanel│  │                      │  └─────────┘   └──────────┬───────────┘  │
-│  │RightPanel │  │                      │                           │              │
-│  └───────────┘  │                      │  ┌────────────────────────▼────────────┐ │
-│                 │                      │  │  Synthesizer (Gemini 2.5 Flash)     │ │
-│                 │                      │  └─────────────────────────────────────┘ │
-└─────────────────┘                      └──────────┬───────────┬───────────────────┘
+┌─────────────────┐     SSE Stream       ┌─────────────────────────────────────────┐
+│   React/Vite    │◄───────────────────► │             FastAPI Backend             │
+│   Frontend      │     POST /api/chat   │                                         │
+│                 │     POST /api/upload │  ┌─────────┐   ┌──────────────────────┐ │
+│  ┌───────────┐  │                      │  │ Brain   │──►│ Agent Nodes          │ │
+│  │LeftPanel  │  │                      │  │ Router  │   │(LangGraph Resilience)│ │
+│  │CenterPanel│  │                      │  └─────────┘   └──────────┬───────────┘ │
+│  │RightPanel │  │                      │                           │             │
+│  └───────────┘  │                      │  ┌────────────────────────▼───────────┐ │
+│                 │                      │  │  Synthesizer (Gemini 2.5 Flash)    │ │
+│                 │                      │  └────────────────────────────────────┘ │
+└─────────────────┘                      └──────────┬───────────┬──────────────────┘
                                                     │           │
                                          ┌──────────▼──┐   ┌────▼───────────┐
                                          │  Supabase   │   │ Upstash Redis  │
@@ -149,7 +149,7 @@ The system utilizes a React/Vite web client communicating with a Python FastAPI 
 
 ## Limitations
 - Only CSV file format is currently supported for data upload.
-- OpenRouter free tier rate limits constrain throughput (~30-50 queries/day without credits).
+- Gemini free-tier rate limits apply per key, sustained heavy usage may still encounter quota throttling.
 - The NewsData.io free tier may rate-limit intensive geopolitical correlation queries.
 
 ## Future Improvements
