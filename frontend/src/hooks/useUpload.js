@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import { uploadCSV } from '../api/upload';
 import { useAppStore } from '../store/appStore';
 
-const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB — Render free-tier RAM cap
+const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB — Render free-tier RAM cap
 
 export function useUpload() {
   const [isUploading, setIsUploading] = useState(false);
@@ -15,7 +15,7 @@ export function useUpload() {
       return false;
     }
     if (file.size > MAX_FILE_SIZE) {
-      toast.error('File exceeds the 2 MB limit. Please trim or sample your CSV before uploading.', { id: 'file-size', duration: 6000 });
+      toast.error('File exceeds the 3 MB limit. Please trim or sample your CSV before uploading.', { id: 'file-size', duration: 6000 });
       return false;
     }
     return true;
