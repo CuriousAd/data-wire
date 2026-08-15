@@ -147,12 +147,31 @@ async def process_large_csv_background(file_path: str, dataset_id: str, database
     from database.connection import AsyncSessionLocal
     from sqlalchemy import select
     
+    async def _set_phase(session, phase: str):
+        """Commit a phase update so the polling frontend sees live progress."""
+        try:
+            ds_result = await session.execute(select(Dataset).where(Dataset.id == dataset_id))
+            ds = ds_result.scalar_one_or_none()
+            if ds:
+                ds.processing_phase = phase
+                await session.commit()
+                logger.info("background_process.phase", dataset_id=dataset_id, phase=phase)
+        except Exception as e:
+            logger.warning("background_process.phase_update_failed", phase=phase, error=str(e))
+    
     async with AsyncSessionLocal() as db_session:
         try:
-            # 1. Process with DuckDB (extract schema and profile)
+            # Phase 1: Parse CSV with DuckDB
+            await _set_phase(db_session, "parsing")
             result = process_csv(file_path, dataset_id)
             
-            # 2. Bulk insert data rows into Postgres
+            # Phase 2: Profile data statistics
+            await _set_phase(db_session, "profiling")
+            # (profiling already happened inside process_csv; this phase marker
+            #  is emitted after parsing so the UI transitions smoothly)
+            
+            # Phase 3: Bulk insert data rows into Postgres
+            await _set_phase(db_session, "loading")
             table_name = bulk_insert_to_postgres(database_url, file_path, dataset_id, result['schema'])
             
             # 3. Update DB records
@@ -161,6 +180,7 @@ async def process_large_csv_background(file_path: str, dataset_id: str, database
             
             if dataset:
                 dataset.status = "ready"
+                dataset.processing_phase = None
                 dataset.row_count = result["row_count"]
                 dataset.column_count = result["column_count"]
                 dataset.table_name = table_name
@@ -191,6 +211,7 @@ async def process_large_csv_background(file_path: str, dataset_id: str, database
                 dataset = dataset_result.scalar_one_or_none()
                 if dataset:
                     dataset.status = "error"
+                    dataset.processing_phase = None
                     dataset.error_message = str(e)[:500]
                     await db_session.commit()
             except Exception as inner_e:
@@ -199,3 +220,4 @@ async def process_large_csv_background(file_path: str, dataset_id: str, database
             # Cleanup temp file
             if os.path.exists(file_path):
                 os.remove(file_path)
+

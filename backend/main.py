@@ -85,6 +85,20 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         # Non-fatal: don't prevent startup if cleanup fails
         logger.warning("system.stale_cleanup.failed", error=str(e))
+
+    # Auto-migrate: add processing_phase column if it doesn't exist yet.
+    # This ensures existing Supabase deployments stay in sync without manual intervention.
+    try:
+        from database.connection import AsyncSessionLocal
+        from sqlalchemy import text
+        async with AsyncSessionLocal() as session:
+            await session.execute(text(
+                "ALTER TABLE datasets ADD COLUMN IF NOT EXISTS processing_phase VARCHAR(50) DEFAULT 'parsing';"
+            ))
+            await session.commit()
+            logger.info("system.migration.processing_phase.ok")
+    except Exception as e:
+        logger.warning("system.migration.processing_phase.failed", error=str(e))
     
     yield
     # Shutdown

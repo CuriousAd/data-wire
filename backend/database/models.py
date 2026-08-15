@@ -19,6 +19,7 @@ class Dataset(Base):
     column_count = Column(Integer, nullable=True)
     table_name = Column(String, nullable=True)  # Name of the actual dynamic PG table
     error_message = Column(String, nullable=True)
+    processing_phase = Column(String, nullable=True, default="parsing")  # parsing | profiling | loading
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class DatasetColumn(Base):

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { Bot, Clock, Copy, Check, AlertTriangle, Send, Square, Loader2, MessageSquare } from 'lucide-react';
+import { Bot, Clock, Copy, Check, AlertTriangle, Send, Square, Loader2, MessageSquare, FileSearch, ChartNoAxesCombined, DatabaseZap } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useAppStore } from '../../store/appStore';
@@ -137,7 +137,17 @@ export function RightPanel({ isMobileFullWidth = false }) {
   const onChange = (e) => { setQuery(e.target.value); const el = e.target; el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; };
 
   const ready = activeDataset?.status === 'ready';
+  const processingPhase = activeDataset?.processingPhase || 'parsing';
   const canSend = query.trim().length > 0 && !isStreaming && ready;
+
+  // Phase-aware messaging for the chat empty state while dataset processes
+  const PHASE_CHAT_CFG = {
+    parsing:   { icon: FileSearch,          msg: 'Parsing CSV structure…' },
+    profiling: { icon: ChartNoAxesCombined, msg: 'Analyzing column statistics…' },
+    loading:   { icon: DatabaseZap,         msg: 'Loading into database…' },
+  };
+  const phaseCfg = PHASE_CHAT_CFG[processingPhase] || PHASE_CHAT_CFG.parsing;
+  const PhaseIcon = phaseCfg.icon;
 
   return (
     <div className={`h-full flex flex-col bg-[#f0ebe4] ${isMobileFullWidth ? '' : 'border-l border-[#e5e0da]'}`}>
@@ -154,7 +164,15 @@ export function RightPanel({ isMobileFullWidth = false }) {
           <div className="flex flex-col items-center justify-center h-full text-center px-4">
             {ready
               ? <p className="text-[12px] text-[#a8a29e]">Ask a question about your dataset</p>
-              : <><Loader2 size={16} className="text-[#1a3c2e] animate-spin mb-2" /><p className="text-[12px] text-[#a8a29e]">Processing dataset…</p></>
+              : (
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-[#dfeee6] border border-[#1a3c2e]/10">
+                    <PhaseIcon size={16} className="text-[#1a3c2e] animate-pulse" />
+                  </div>
+                  <p className="text-[12px] font-medium text-[#4a4a4a]">{phaseCfg.msg}</p>
+                  <p className="text-[11px] text-[#a8a29e]">Chat will be ready shortly…</p>
+                </div>
+              )
             }
           </div>
         )}

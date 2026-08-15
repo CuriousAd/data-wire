@@ -22,6 +22,10 @@ async def get_dataset_status(dataset_id: str, db: AsyncSession = Depends(get_db)
         "filename": dataset.original_filename,
     }
     
+    # Expose current ingestion phase so the frontend can render granular progress
+    if dataset.status == "processing" and dataset.processing_phase:
+        response["processing_phase"] = dataset.processing_phase
+    
     if dataset.status == "error":
         response["success"] = False
         response["code"] = "PIPELINE_ERROR"
